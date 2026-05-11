@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: gateway
+  
+  main:
+    web-application-type: reactive
+  
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    gateway:
+      health:
+        enabled: true
+      httpclient:
+        connect-timeout: 10000
+        response-timeout: 60000
+    
+    nacos:
+      discovery:
+        server-addr: nacos:8848
+        namespace: public
+        timeout: 30000
+      client:
+        namespace: public
+        timeout: 30000
+    
+    sentinel:
+      enabled: false
+
+  data:
+    redis:
+      host: redis
+      port: 6379
+      password: redis123
+      database: 0
+
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: admin
+    password: rabbit123
+    virtual-host: /
+    listener:
+      simple:
+        concurrency: 1
+        max-concurrency: 10
+        prefetch: 1
+        auto-startup: true
+        default-requeue-rejected: true
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+logging:
+  level:
+    org.springframework.cloud.gateway: info
+    org.springframework.cloud.alibaba.sentinel: info
+
+# 网关路由配置 - 使用 Nacos 服务发现
+gateway:
+  route:
+    user-uri: lb://user
+    file-uri: lb://file
+    ai-uri: lb://ai
+    document-uri: lb://document
+
+custom:
+  jwt:
+    header: Authorization
+    prefix: Bearer 
+  
+  rate-limit:
+    enable: true
+    redis-key-prefix: gateway:rate-limit
+    default-rate: 100
+    default-burst: 200

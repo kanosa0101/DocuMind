@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: document
+
+  datasource:
+    url: jdbc:mysql://your_mysql_host:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: your_mysql_username
+    password: your_mysql_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    nacos:
+      discovery:
+        enabled: true
+        server-addr: your_nacos_host:8848
+        namespace: public
+        timeout: 30000
+      client:
+        namespace: public
+        timeout: 30000
+
+  data:
+    redis:
+      host: your_redis_host
+      port: 6379
+      password: your_redis_password
+      database: 2
+      timeout: 10000
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1
+          max-idle: 8
+          min-idle: 0
+
+mybatis-plus:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.javaee.documentservice.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+server:
+  port: 8084
+  servlet:
+    context-path: /
+
+logging:
+  level:
+    com.javaee.documentservice: debug
+    org.springframework.security: info
+
+custom:
+  jwt:
+    header: Authorization
+    prefix: Bearer
+
+# MinIO配置
+minio:
+  endpoint: http://your_minio_host:9000
+  access-key: your_minio_access_key
+  secret-key: your_minio_secret_key
+  bucket-name: document
+
+# 文件服务配置
+file:
+  service:
+    url: http://your_file_service_host:8082

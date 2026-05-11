@@ -1,0 +1,97 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: ai-service
+  main:
+    allow-bean-definition-overriding: true
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
+  
+  datasource:
+    url: jdbc:mysql://your_mysql_host:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: your_mysql_username
+    password: your_mysql_password
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  cloud:
+    compatibility-verifier:
+      enabled: false
+    nacos:
+      discovery:
+        server-addr: your_nacos_host:8848
+        namespace: public
+        timeout: 30000
+      client:
+        namespace: public
+        timeout: 30000
+
+  data:
+    redis:
+      host: your_redis_host
+      port: 6379
+      password: your_redis_password
+      database: 1
+      timeout: 10000
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1
+          max-idle: 8
+          min-idle: 0
+
+  ai:
+    dashscope:
+      api-key: your_dashscope_api_key
+      chat:
+        model: deepseek-v3.2
+      embedding:
+        model: text-embedding-v1
+
+  rabbitmq:
+    host: your_rabbitmq_host
+    port: 5672
+    username: your_rabbitmq_username
+    password: your_rabbitmq_password
+    virtual-host: /
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+# AI配置
+ai:
+  conversation:
+    max-messages: 100
+    expiry-hours: 24
+
+# MinIO配置
+minio:
+  endpoint: http://your_minio_host:9000
+  access-key: your_minio_access_key
+  secret-key: your_minio_secret_key
+  bucket: documents
+  url:
+    expiry: 3600
+  recycle:
+    expiry-days: 7
+  delete:
+    confirmation-timeout: 300
+
+# 日志配置
+logging:
+  level:
+    com.javaee.aiservice: debug
+    org.springframework.ai: info
+    org.springframework.security: info
+
+# SpringDoc配置
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html

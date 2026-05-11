@@ -1,0 +1,38 @@
+# Git
+.git
+.gitignore
+
+# IDE
+.idea
+.vscode
+*.iml
+
+# 日志
+*.log
+logs/
+
+# 文档
+*.md
+CONFIG.md
+
+# Docker 和部署文件
+docker-compose*.yml
+deploy.sh
+prometheus.yml
+mysql-schema.sql
+
+# Maven target 目录 - 排除所有，只保留 jar 包
+*/target/classes
+*/target/test-classes
+*/target/maven-status
+*/target/maven-archiver
+*/target/generated-sources
+*/target/generated-test-sources
+*/target/surefire-reports
+*/target/*.tmp
+common/target
+
+# 其他
+.DS_Store
+Thumbs.db
+*.tmp
