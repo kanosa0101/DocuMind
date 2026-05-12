@@ -6,14 +6,11 @@ spring:
     name: ai-service
   main:
     allow-bean-definition-overriding: true
-  autoconfigure:
-    exclude:
-      - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
-  
+
   datasource:
-    url: jdbc:mysql://your_mysql_host:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: your_mysql_username
-    password: your_mysql_password
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:doc_ai}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:admin123}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   cloud:
@@ -21,7 +18,7 @@ spring:
       enabled: false
     nacos:
       discovery:
-        server-addr: your_nacos_host:8848
+        server-addr: ${NACOS_HOST:localhost}:${NACOS_PORT:8848}
         namespace: public
         timeout: 30000
       client:
@@ -30,9 +27,9 @@ spring:
 
   data:
     redis:
-      host: your_redis_host
-      port: 6379
-      password: your_redis_password
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
       database: 1
       timeout: 10000
       lettuce:
@@ -42,19 +39,29 @@ spring:
           max-idle: 8
           min-idle: 0
 
+  # DeepSeek API 配置 (OpenAI 兼容)
   ai:
-    dashscope:
-      api-key: your_dashscope_api_key
+    openai:
+      api-key: ${OPENAI_API_KEY}
+      base-url: ${OPENAI_API_BASE:https://api.deepseek.com/v1}
       chat:
-        model: deepseek-v3.2
+        options:
+          model: ${OPENAI_MODEL:deepseek-v4-flash}
       embedding:
-        model: text-embedding-v1
+        options:
+          model: text-embedding-v1
+    # 阿里云百炼 dashscope API 配置（用于Embedding向量化）
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY:}
+      embedding:
+        model: ${DASHSCOPE_EMBEDDING_MODEL:text-embedding-v3}
+        dimension: 1024
 
   rabbitmq:
-    host: your_rabbitmq_host
-    port: 5672
-    username: your_rabbitmq_username
-    password: your_rabbitmq_password
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:admin}
+    password: ${RABBITMQ_PASSWORD:rabbit123}
     virtual-host: /
 
   servlet:
@@ -71,10 +78,10 @@ ai:
 
 # MinIO配置
 minio:
-  endpoint: http://your_minio_host:9000
-  access-key: your_minio_access_key
-  secret-key: your_minio_secret_key
-  bucket: documents
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:admin}
+  secret-key: ${MINIO_SECRET_KEY:minio123}
+  bucket: ${MINIO_BUCKET:documents}
   url:
     expiry: 3600
   recycle:
@@ -85,9 +92,9 @@ minio:
 # 日志配置
 logging:
   level:
-    com.javaee.aiservice: debug
+    com.javaee.aiservice: ${LOG_LEVEL_APP:info}
     org.springframework.ai: info
-    org.springframework.security: info
+    org.springframework.security: warn
 
 # SpringDoc配置
 springdoc:

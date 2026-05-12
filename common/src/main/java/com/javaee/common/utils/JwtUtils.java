@@ -6,6 +6,9 @@ import com.javaee.common.exception.TokenException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -16,13 +19,33 @@ import java.util.Map;
 /**
  * @author qxk
  * @description: JWT工具（生成/解析/验证）
+ * 注意：密钥和过期时间从配置文件读取，确保安全性和可配置性
  */
+@Slf4j
+@Component
 public class JwtUtils {
 
-    private static final String SECRET_KEY = "your-secret-key-for-jwt-token-generation-and-validation-please-change-this";
-    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET_KEY.getBytes(StandardCharsets.UTF_8));
-    private static final long TOKEN_EXPIRATION = 30 * 60 * 1000;
-    private static final long REFRESH_TOKEN_EXPIRATION = 7 * 24 * 60 * 60 * 1000;
+    @Value("${jwt.secret:your-secret-key-for-jwt-token-generation-and-validation-please-change-this-in-production}")
+    private String secretKey;
+
+    @Value("${jwt.token-expiration:30}")
+    private long tokenExpirationMinutes;
+
+    @Value("${jwt.refresh-token-expiration:168}")
+    private long refreshTokenExpirationHours;
+
+    /**
+     * 获取签名密钥
+     * @return SecretKey
+     */
+    private SecretKey getSigningKey() {
+        // 确保密钥长度满足HMAC-SHA256的要求（至少256位/32字节）
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            log.warn("JWT密钥长度不足32字节，建议使用更长的密钥以增强安全性");
+        }
+        return Keys.hmacShaKeyFor(keyBytes);
+    }
 
     /**
      * 生成访问令牌
@@ -30,11 +53,11 @@ public class JwtUtils {
      * @param username 用户名
      * @return 令牌
      */
-    public static String generateToken(Long userId, String username) {
+    public String generateToken(Long userId, String username) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(CommonConstant.TOKEN_CLAIM_USER_ID, userId);
         claims.put(CommonConstant.TOKEN_CLAIM_USERNAME, username);
-        return generateToken(claims, TOKEN_EXPIRATION);
+        return generateToken(claims, tokenExpirationMinutes * 60 * 1000);
     }
 
     /**
@@ -44,12 +67,12 @@ public class JwtUtils {
      * @param role 角色
      * @return 令牌
      */
-    public static String generateToken(Long userId, String username, String role) {
+    public String generateToken(Long userId, String username, String role) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(CommonConstant.TOKEN_CLAIM_USER_ID, userId);
         claims.put(CommonConstant.TOKEN_CLAIM_USERNAME, username);
         claims.put(CommonConstant.TOKEN_CLAIM_ROLE, role);
-        return generateToken(claims, TOKEN_EXPIRATION);
+        return generateToken(claims, tokenExpirationMinutes * 60 * 1000);
     }
 
     /**
@@ -57,26 +80,26 @@ public class JwtUtils {
      * @param userId 用户ID
      * @return 刷新令牌
      */
-    public static String generateRefreshToken(Long userId) {
+    public String generateRefreshToken(Long userId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put(CommonConstant.TOKEN_CLAIM_USER_ID, userId);
-        return generateToken(claims, REFRESH_TOKEN_EXPIRATION);
+        return generateToken(claims, refreshTokenExpirationHours * 60 * 60 * 1000);
     }
 
     /**
      * 生成令牌
      * @param claims 声明
-     * @param expiration 过期时间
+     * @param expiration 过期时间（毫秒）
      * @return 令牌
      */
-    private static String generateToken(Map<String, Object> claims, long expiration) {
+    private String generateToken(Map<String, Object> claims, long expiration) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
         return Jwts.builder()
                 .setClaims(claims)
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
-                .signWith(KEY)
+                .signWith(getSigningKey())
                 .compact();
     }
 
@@ -85,14 +108,15 @@ public class JwtUtils {
      * @param token 令牌
      * @return 声明
      */
-    public static Claims parseToken(String token) {
+    public Claims parseToken(String token) {
         try {
             return Jwts.parserBuilder()
-                    .setSigningKey(KEY)
+                    .setSigningKey(getSigningKey())
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
         } catch (Exception e) {
+            log.error("JWT令牌解析失败: {}", e.getMessage());
             throw new TokenException(ErrorCodeEnum.TOKEN_ERROR);
         }
     }
@@ -102,11 +126,12 @@ public class JwtUtils {
      * @param token 令牌
      * @return 是否有效
      */
-    public static boolean validateToken(String token) {
+    public boolean validateToken(String token) {
         try {
             parseToken(token);
             return true;
         } catch (Exception e) {
+            log.warn("JWT令牌验证失败: {}", e.getMessage());
             return false;
         }
     }
@@ -116,7 +141,7 @@ public class JwtUtils {
      * @param token 令牌
      * @return 用户ID
      */
-    public static Long getUserId(String token) {
+    public Long getUserId(String token) {
         Claims claims = parseToken(token);
         return claims.get(CommonConstant.TOKEN_CLAIM_USER_ID, Long.class);
     }
@@ -126,7 +151,7 @@ public class JwtUtils {
      * @param token 令牌
      * @return 用户名
      */
-    public static String getUsername(String token) {
+    public String getUsername(String token) {
         Claims claims = parseToken(token);
         return claims.get(CommonConstant.TOKEN_CLAIM_USERNAME, String.class);
     }
@@ -136,7 +161,7 @@ public class JwtUtils {
      * @param token 令牌
      * @return 角色
      */
-    public static String getRole(String token) {
+    public String getRole(String token) {
         Claims claims = parseToken(token);
         return claims.get(CommonConstant.TOKEN_CLAIM_ROLE, String.class);
     }
@@ -146,7 +171,7 @@ public class JwtUtils {
      * @param token 令牌
      * @return 是否过期
      */
-    public static boolean isTokenExpired(String token) {
+    public boolean isTokenExpired(String token) {
         try {
             Claims claims = parseToken(token);
             Date expiration = claims.getExpiration();
@@ -161,7 +186,7 @@ public class JwtUtils {
      * @param authHeader 认证头
      * @return 令牌
      */
-    public static String extractToken(String authHeader) {
+    public String extractToken(String authHeader) {
         if (authHeader != null && authHeader.startsWith(CommonConstant.TOKEN_PREFIX)) {
             return authHeader.substring(CommonConstant.TOKEN_PREFIX.length());
         }

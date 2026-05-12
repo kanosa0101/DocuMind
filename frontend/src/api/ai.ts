@@ -18,7 +18,7 @@ export async function analyzeText(content: string): Promise<TextAnalyzeVO> {
   return api.post<TextAnalyzeVO>('/api/ai/analyze', { content })
 }
 
-// RAG知识库问答
+// RAG知识库问答 - 发送JSON对象 {question, strategy}
 export async function ragQuery(question: string, strategy?: string): Promise<RagQueryVO> {
   return api.post<RagQueryVO>('/api/ai/rag/query', { question, strategy })
 }
@@ -42,9 +42,9 @@ export async function startConversation(): Promise<string> {
   return api.post<string>('/api/ai/agent/chat/start')
 }
 
-// 发送Agent消息
+// 发送Agent消息 - 发送JSON对象 {userInput}
 export async function sendAgentMessage(conversationId: string, userInput: string): Promise<{ answer: string; conversationId: string }> {
-  return api.post<{ answer: string; conversationId: string }>('/api/ai/agent/chat', userInput, {
+  return api.post<{ answer: string; conversationId: string }>('/api/ai/agent/chat', { userInput }, {
     params: { conversationId }
   })
 }

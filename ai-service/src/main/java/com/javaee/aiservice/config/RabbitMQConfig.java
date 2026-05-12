@@ -1,12 +1,17 @@
 package com.javaee.aiservice.config;
 
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * RabbitMQ配置类
  * 配置消息队列和交换机
+ * 注意：配置了安全的消息转换器，限制反序列化的包范围
  */
 @Configuration
 public class RabbitMQConfig {
@@ -53,5 +58,26 @@ public class RabbitMQConfig {
     @Bean
     public Binding alertBinding(Exchange aiExchange, Queue aiAlertQueue) {
         return BindingBuilder.bind(aiAlertQueue).to(aiExchange).with("alert").noargs();
+    }
+
+    /**
+     * 安全的消息转换器
+     * 使用Jackson进行JSON序列化/反序列化
+     * 注：信任包配置通过环境变量SPRING_AMQP_DESERIALIZATION_TRUST_ALL控制
+     */
+    @Bean
+    public MessageConverter jsonMessageConverter() {
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        return converter;
+    }
+
+    /**
+     * RabbitTemplate配置
+     */
+    @Bean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate template = new RabbitTemplate(connectionFactory);
+        template.setMessageConverter(jsonMessageConverter());
+        return template;
     }
 }

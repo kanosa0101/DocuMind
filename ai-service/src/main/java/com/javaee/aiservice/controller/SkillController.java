@@ -5,8 +5,8 @@ import com.javaee.common.model.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +18,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import com.javaee.aiservice.service.MinIOService;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/skills")
 @Tag(name = "技能管理", description = "AI技能执行接口")
@@ -58,86 +59,92 @@ public class SkillController {
      */
     @GetMapping("/file/download")
     @Operation(
-        summary = "执行文件下载技能", 
+        summary = "执行文件下载技能",
         description = "使用技能从MinIO服务器下载文件到本地电脑"
     )
     public ResponseEntity<org.springframework.core.io.Resource> executeFileDownloadSkill(
             @Parameter(description = "对象名称") @RequestParam("objectName") String objectName,
             @Parameter(description = "存储桶名称（可选）") @RequestParam(required = false) String bucketName) {
-        System.out.println("接收到文件下载请求: objectName=" + objectName + ", bucketName=" + bucketName);
+        log.info("接收到文件下载请求: objectName={}, bucketName={}", objectName, bucketName);
         try {
-            System.out.println("开始执行文件下载技能...");
+            log.info("开始执行文件下载技能...");
             // 执行技能获取文件流和元数据
             Object result = skillExecutorService.executeSkill("File Download Skill", objectName, bucketName);
-            System.out.println("执行技能成功，获取到结果");
-            
+            log.info("执行技能成功，获取到结果");
+
             // 检查结果类型
             if (!(result instanceof Object[])) {
                 throw new RuntimeException("技能返回类型错误，期望Object[]，实际得到: " + result.getClass().getName());
             }
-            
+
             Object[] resultArray = (Object[]) result;
             if (resultArray.length < 3) {
                 throw new RuntimeException("技能返回数组长度错误，期望至少3，实际得到: " + resultArray.length);
             }
-            
+
             // 提取文件流、内容类型和对象名称
             InputStream inputStream = (InputStream) resultArray[0];
             String contentType = (String) resultArray[1];
             String originalObjectName = (String) resultArray[2];
             String bucketMessage = resultArray.length > 3 ? (String) resultArray[3] : null;
             String actualBucketName = resultArray.length > 4 ? (String) resultArray[4] : bucketName;
-            
+
             // 打印桶消息
             if (bucketMessage != null) {
-                System.out.println("桶信息: " + bucketMessage);
+                log.info("桶信息: {}", bucketMessage);
             }
-            System.out.println("实际使用的桶: " + actualBucketName);
-            
+            log.info("实际使用的桶: {}", actualBucketName);
+
             // 提取文件名
             String filename = originalObjectName;
             if (filename.contains("/")) {
                 filename = filename.substring(filename.lastIndexOf("/") + 1);
             }
-            
+
             // 根据内容类型确定文件扩展名
             String fileExtension = getFileExtensionFromContentType(contentType);
             if (!filename.contains(".") && fileExtension != null) {
                 filename = filename + "." + fileExtension;
             }
-            
+
             // 包装为资源
-            org.springframework.core.io.InputStreamResource resource = 
+            org.springframework.core.io.InputStreamResource resource =
                 new org.springframework.core.io.InputStreamResource(inputStream);
-            
+
             // 确定媒体类型
             MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
             try {
                 mediaType = MediaType.parseMediaType(contentType);
             } catch (Exception e) {
-                // 如果无法解析内容类型，使用默认值
+                log.warn("无法解析内容类型: {}，使用默认值", contentType);
             }
-            
+
             // 构建响应头
             HttpHeaders headers = new HttpHeaders();
-            headers.add(HttpHeaders.CONTENT_DISPOSITION, 
+            headers.add(HttpHeaders.CONTENT_DISPOSITION,
                 "attachment; filename=\"" + URLEncoder.encode(filename, StandardCharsets.UTF_8) + "\"");
-            
+
             // 添加桶信息到响应头
             if (bucketMessage != null) {
                 headers.add("X-Bucket-Message", URLEncoder.encode(bucketMessage, StandardCharsets.UTF_8));
             }
             headers.add("X-Actual-Bucket", actualBucketName);
-            
+
+            log.info("文件下载成功: {}", filename);
             // 返回文件流，浏览器会自动下载到本地
             return ResponseEntity.ok()
                 .headers(headers)
                 .contentType(mediaType)
                 .body(resource);
         } catch (Exception e) {
-            // 记录异常信息
-            e.printStackTrace();
-            return ResponseEntity.internalServerError().build();
+            log.error("文件下载失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .body(new org.springframework.core.io.InputStreamResource(
+                    new java.io.ByteArrayInputStream(
+                        ("{\"code\":500,\"message\":\"文件下载失败: " + e.getMessage() + "\"}").getBytes()
+                    )
+                ));
         }
     }
     

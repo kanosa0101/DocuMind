@@ -1,6 +1,7 @@
 // Axios实例配置与拦截器
 
 import axios from 'axios'
+import router from '@/router'
 import { tokenManager } from '@/utils/token'
 import type { Result } from '@/types/api'
 
@@ -17,14 +18,33 @@ const api = axios.create({
 })
 
 // 白名单路径（无需认证）
-const whiteList = ['/api/users/login', '/api/users/register', '/api/users/refresh', '/api/users/logout']
+const whiteList = ['/api/users/login', '/api/users/register', '/api/users/refresh']
+
+// 标记是否正在刷新Token
+let isRefreshing = false
+// 等待Token刷新的请求队列
+let refreshSubscribers: ((token: string) => void)[] = []
+// 标记是否已经处理401跳转（防止多次跳转）
+let hasRedirectedToLogin = false
+
+// 订阅Token刷新
+function subscribeTokenRefresh(callback: (token: string) => void) {
+  refreshSubscribers.push(callback)
+}
+
+// 通知所有订阅者Token已刷新
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach(callback => callback(token))
+  refreshSubscribers = []
+}
 
 // 请求拦截器
 api.interceptors.request.use(
   async (config) => {
-    // 白名单路径跳过认证
+    // 白名单路径跳过认证（精确匹配）
     const url = config.url || ''
-    if (whiteList.some(path => url.includes(path))) {
+    const isWhiteListed = whiteList.some(path => url === path || url.startsWith(path + '?'))
+    if (isWhiteListed) {
       return config
     }
 
@@ -43,6 +63,17 @@ api.interceptors.request.use(
     if (now > tokenInfo.expiresAt - 5 * 60 * 1000 && now < tokenInfo.refreshExpiresAt) {
       const refreshToken = tokenManager.getRefreshToken()
       if (refreshToken) {
+        // 如果已经在刷新，等待刷新完成
+        if (isRefreshing) {
+          return new Promise((resolve) => {
+            subscribeTokenRefresh((token) => {
+              config.headers.Authorization = `Bearer ${token}`
+              resolve(config)
+            })
+          })
+        }
+
+        isRefreshing = true
         try {
           const response = await axios.post(`${baseURL}/api/users/refresh`, null, {
             params: { refreshToken }
@@ -51,10 +82,19 @@ api.interceptors.request.use(
           if (result.code === 200) {
             tokenManager.updateAccessToken(result.data)
             accessToken = result.data
+            onTokenRefreshed(result.data)
           }
         } catch (error) {
-          // 刷新失败，继续使用旧token（让响应拦截器处理401）
-          console.warn('Token刷新失败，继续使用旧token')
+          // 刷新失败，清除token并跳转登录页
+          console.warn('Token刷新失败，清除认证信息')
+          tokenManager.clearTokens()
+          onTokenRefreshed('') // 通知等待的请求（token为空表示失败）
+          // 跳转登录页
+          const currentPath = window.location.pathname
+          router.push({ path: '/login', query: { redirect: currentPath !== '/login' ? currentPath : '/dashboard' } })
+          return Promise.reject(error)
+        } finally {
+          isRefreshing = false
         }
       }
     }
@@ -64,11 +104,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${accessToken}`
     }
 
-    // 添加用户ID头（从Token解析）
-    const user = tokenManager.getUser()
-    if (user) {
-      config.headers['X-User-Id'] = user.id
-    }
+    // 注意：不再设置X-User-Id头，网关会从JWT解析并设置该头
 
     return config
   },
@@ -92,9 +128,25 @@ api.interceptors.response.use(
   (error) => {
     // HTTP错误处理
     if (error.response?.status === 401) {
-      // 只在明确401时清除token并跳转
+      // 清除token
       tokenManager.clearTokens()
-      window.location.href = '/login'
+
+      // 防止多次跳转（使用防抖标记）
+      if (!hasRedirectedToLogin) {
+        hasRedirectedToLogin = true
+        // 获取当前路径作为重定向目标
+        const currentPath = window.location.pathname
+        const redirectPath = currentPath !== '/login' ? currentPath : '/dashboard'
+
+        // 跳转登录页，携带redirect参数
+        if (currentPath !== '/login') {
+          router.push({ path: '/login', query: { redirect: redirectPath } })
+        }
+        // 延迟重置标记，防止在跳转过程中重复触发
+        setTimeout(() => {
+          hasRedirectedToLogin = false
+        }, 1000)
+      }
     }
     return Promise.reject(error)
   }

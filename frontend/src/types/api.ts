@@ -63,7 +63,7 @@ export interface FileMetadata {
 export interface DocumentVO {
   id: string
   title: string
-  content: string
+  content?: string
   summary?: string
   keywords?: string[]
   fileId?: string
@@ -71,6 +71,7 @@ export interface DocumentVO {
   tags?: string[]
   version: number
   status: string
+  userId?: string
   createdBy?: string
   createTime: string
   updateTime: string
@@ -79,11 +80,11 @@ export interface DocumentVO {
 // 文档版本
 export interface DocumentVersion {
   id: string
-  docId: string
+  documentId: string
   versionNumber: number
   content: string
-  changeSummary?: string
-  userId: number
+  changeLog?: string
+  createdBy?: string
   createTime: string
 }
 

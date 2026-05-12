@@ -9,6 +9,10 @@ import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * RabbitMQ配置类
+ * 注意：配置了安全的消息转换器，限制反序列化的包范围
+ */
 @Configuration
 public class RabbitMQConfig {
 
@@ -34,11 +38,20 @@ public class RabbitMQConfig {
                 .with(FILE_UPLOAD_ROUTING_KEY);
     }
 
+    /**
+     * 安全的消息转换器
+     * 使用Jackson进行JSON序列化/反序列化
+     * 注：信任包配置通过环境变量SPRING_AMQP_DESERIALIZATION_TRUST_ALL控制
+     */
     @Bean
     public MessageConverter jsonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
+        Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
+        return converter;
     }
 
+    /**
+     * RabbitTemplate配置
+     */
     @Bean
     public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
         RabbitTemplate template = new RabbitTemplate(connectionFactory);

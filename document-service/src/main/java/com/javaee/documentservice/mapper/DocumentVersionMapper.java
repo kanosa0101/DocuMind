@@ -13,11 +13,13 @@ import java.util.List;
 @Mapper
 public interface DocumentVersionMapper extends BaseMapper<DocumentVersion> {
 
-    List<DocumentVersion> selectByDocumentId(@Param("documentId") String documentId);
+    List<DocumentVersion> selectByDocId(@Param("docId") Long docId);
 
-    DocumentVersion selectLatestVersion(@Param("documentId") String documentId);
+    DocumentVersion selectLatestVersion(@Param("docId") Long docId);
 
-    Integer selectMaxVersionNumber(@Param("documentId") String documentId);
+    Integer selectMaxVersion(@Param("docId") Long docId);
 
-    DocumentVersion selectByDocumentIdAndVersion(@Param("documentId") String documentId, @Param("versionNumber") Integer versionNumber);
+    DocumentVersion selectByDocIdAndVersion(@Param("docId") Long docId, @Param("version") Integer version);
+
+    int deleteByDocId(@Param("docId") Long docId);
 }

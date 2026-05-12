@@ -67,8 +67,8 @@
       </div>
 
       <div v-else class="files-grid">
-        <div v-for="file in files" :key="file.id" class="file-card">
-          <div class="file-icon">{{ getFileIcon(file.fileType) }}</div>
+        <div v-for="file in files" :key="file.fileId" class="file-card">
+          <div class="file-icon">{{ getFileIcon(file) }}</div>
           <div class="file-info">
             <h4 class="file-name" :title="file.originalFileName">{{ file.originalFileName }}</h4>
             <p class="file-meta">
@@ -85,11 +85,11 @@
         </div>
       </div>
 
-      <!-- 分页 -->
-      <div v-if="files.length > 0" class="pagination">
+      // 分页 - 使用总文件数计算总页数
+      <div v-if="files.length > 0 || currentPage > 1" class="pagination">
         <button :disabled="currentPage === 1" @click="changePage(currentPage - 1)">上一页</button>
-        <span class="page-info">第 {{ currentPage }} 页</span>
-        <button :disabled="files.length < pageSize" @click="changePage(currentPage + 1)">下一页</button>
+        <span class="page-info">第 {{ currentPage }} 页 / 共 {{ Math.ceil(totalFiles / pageSize) || 1 }} 页 ({{ totalFiles }} 个文件)</span>
+        <button :disabled="currentPage >= Math.ceil(totalFiles / pageSize)" @click="changePage(currentPage + 1)">下一页</button>
       </div>
     </div>
 
@@ -123,10 +123,12 @@ const loading = ref(false)
 const searchKeyword = ref('')
 const currentPage = ref(1)
 const pageSize = ref(12)
+const totalFiles = ref(0) // 总文件数，用于更准确的分页判断
 const showUploadZone = ref(false)
 const isDragging = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const uploadingFiles = ref<{ name: string; progress: number }[]>([])
+const uploadErrors = ref<{ name: string; error: string }[]>([]) // 上传错误列表
 
 // 重命名对话框
 const renameDialog = ref({
@@ -140,12 +142,19 @@ async function loadFiles() {
   loading.value = true
   try {
     if (searchKeyword.value.trim()) {
-      files.value = await searchFiles(searchKeyword.value.trim(), currentPage.value, pageSize.value)
+      const result = await searchFiles(searchKeyword.value.trim(), currentPage.value, pageSize.value)
+      files.value = result.files
+      totalFiles.value = result.total
     } else {
-      files.value = await getFileList(currentPage.value, pageSize.value)
+      const result = await getFileList(currentPage.value, pageSize.value)
+      files.value = result.files
+      totalFiles.value = result.total
     }
-  } catch (error: any) {
-    console.error('加载文件失败:', error.message)
+  } catch (error) {
+    const err = error as { message?: string }
+    console.error('加载文件失败:', err?.message || '未知错误')
+    files.value = []
+    totalFiles.value = 0
   } finally {
     loading.value = false
   }
@@ -192,6 +201,8 @@ async function handleDrop(e: DragEvent) {
 }
 
 async function uploadFiles(fileList: File[]) {
+  uploadErrors.value = [] // 清空之前的错误
+
   for (const file of fileList) {
     const uploadingFile = { name: file.name, progress: 0 }
     uploadingFiles.value.push(uploadingFile)
@@ -201,54 +212,106 @@ async function uploadFiles(fileList: File[]) {
         uploadingFile.progress = percent
       })
       uploadingFile.progress = 100
-    } catch (error: any) {
-      console.error(`上传 ${file.name} 失败:`, error.message)
+    } catch (error) {
+      const err = error as { message?: string }
+      const errorMsg = err?.message || '上传失败'
+      console.error(`上传 ${file.name} 失败:`, errorMsg)
+      uploadErrors.value.push({ name: file.name, error: errorMsg })
+      // 移除上传进度项
+      uploadingFiles.value = uploadingFiles.value.filter(f => f.name !== file.name)
     }
   }
 
   // 上传完成后刷新列表
+  if (uploadingFiles.value.filter(f => f.progress === 100).length > 0) {
+    loadFiles()
+  }
+
+  // 显示错误信息
+  if (uploadErrors.value.length > 0) {
+    const errorNames = uploadErrors.value.map(e => e.name).join(', ')
+    alert(`以下文件上传失败: ${errorNames}`)
+  }
+
+  // 延迟清空进度列表
   setTimeout(() => {
     uploadingFiles.value = []
     showUploadZone.value = false
-    loadFiles()
-  }, 1000)
+  }, 500)
 }
 
 // 预览
 async function handlePreview(file: FileMetadata) {
   try {
-    const blob = await previewFile(file.id)
+    const blob = await previewFile(file.fileId)
     const url = URL.createObjectURL(blob)
-    window.open(url, '_blank')
-  } catch (error: any) {
-    console.error('预览失败:', error.message)
+    // 使用更可靠的预览方式
+    const previewWindow = window.open(url, '_blank')
+    if (!previewWindow) {
+      alert('无法打开预览窗口，请检查浏览器设置')
+    }
+  } catch (error) {
+    const err = error as { message?: string }
+    console.error('预览失败:', err?.message || '未知错误')
+    alert(`预览失败: ${err?.message || '未知错误'}`)
   }
 }
 
 // 下载
 async function handleDownload(file: FileMetadata) {
   try {
-    const blob = await downloadFile(file.id)
+    const { blob, fileName } = await downloadFile(file.fileId)
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = file.originalFileName
+    // 优先使用后端返回的文件名，其次使用前端元数据中的文件名
+    let downloadName = fileName || file.originalFileName || file.fileName || 'download'
+    // 如果没有扩展名，尝试从fileType推断
+    if (!downloadName.includes('.') && file.fileType) {
+      const extMap: Record<string, string> = {
+        'application/pdf': '.pdf',
+        'application/msword': '.doc',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+        'application/vnd.ms-excel': '.xls',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+        'image/jpeg': '.jpg',
+        'image/png': '.png',
+        'text/plain': '.txt'
+      }
+      const ext = extMap[file.fileType] || ''
+      downloadName += ext
+    }
+    a.download = downloadName
+    document.body.appendChild(a)
     a.click()
+    document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  } catch (error: any) {
-    console.error('下载失败:', error.message)
+  } catch (error) {
+    const err = error as { message?: string }
+    console.error('下载失败:', err?.message || '未知错误')
+    alert(`下载失败: ${err?.message || '未知错误'}`)
   }
 }
 
 // 删除
 async function handleDelete(file: FileMetadata) {
-  if (!confirm(`确认删除文件 "${file.originalFileName}"?`)) return
+  // 使用自定义确认对话框代替原生confirm
+  const confirmed = window.confirm(`确认删除文件 "${file.originalFileName}"？删除后将无法恢复。`)
+  if (!confirmed) return
 
   try {
-    await deleteFile(file.id)
-    loadFiles()
-  } catch (error: any) {
-    console.error('删除失败:', error.message)
+    await deleteFile(file.fileId)
+    // 从列表中直接移除，避免重新请求
+    files.value = files.value.filter(f => f.fileId !== file.fileId)
+    // 如果当前页没有文件了，回到上一页
+    if (files.value.length === 0 && currentPage.value > 1) {
+      currentPage.value--
+      loadFiles()
+    }
+  } catch (error) {
+    const err = error as { message?: string }
+    console.error('删除失败:', err?.message || '未知错误')
+    alert(`删除失败: ${err?.message || '未知错误'}`)
   }
 }
 
@@ -256,7 +319,7 @@ async function handleDelete(file: FileMetadata) {
 function showRenameDialog(file: FileMetadata) {
   renameDialog.value = {
     visible: true,
-    fileId: file.id,
+    fileId: file.fileId,
     newName: file.originalFileName
   }
 }
@@ -266,19 +329,33 @@ function closeRenameDialog() {
 }
 
 async function confirmRename() {
-  if (!renameDialog.value.newName.trim()) return
+  if (!renameDialog.value.newName.trim()) {
+    alert('文件名不能为空')
+    return
+  }
 
   try {
-    await renameFile(renameDialog.value.fileId, renameDialog.value.newName)
+    await renameFile(renameDialog.value.fileId, renameDialog.value.newName.trim())
     closeRenameDialog()
-    loadFiles()
-  } catch (error: any) {
-    console.error('重命名失败:', error.message)
+    // 直接更新列表中的文件名，避免重新请求
+    const file = files.value.find(f => f.fileId === renameDialog.value.fileId)
+    if (file) {
+      file.originalFileName = renameDialog.value.newName.trim()
+      file.fileName = renameDialog.value.newName.trim()
+    }
+  } catch (error) {
+    const err = error as { message?: string }
+    console.error('重命名失败:', err?.message || '未知错误')
+    alert(`重命名失败: ${err?.message || '未知错误'}`)
   }
 }
 
 // 工具函数
-function getFileIcon(type: string): string {
+function getFileIcon(file: FileMetadata): string {
+  // 从文件名提取扩展名
+  const fileName = file.originalFileName || file.fileName || ''
+  const ext = fileName.split('.').pop()?.toLowerCase() || ''
+
   const icons: Record<string, string> = {
     'pdf': '📕',
     'doc': '📘',
@@ -297,7 +374,7 @@ function getFileIcon(type: string): string {
     'mp4': '🎬',
     'mp3': '🎵'
   }
-  return icons[type.toLowerCase()] || '📄'
+  return icons[ext] || '📄'
 }
 
 function formatFileSize(size: number): string {

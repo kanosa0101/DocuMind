@@ -1,5 +1,8 @@
 package com.javaee.aiservice.controller;
 
+import com.javaee.aiservice.agent.ChatService;
+import com.javaee.aiservice.agent.PromptEngineeringService;
+import com.javaee.aiservice.dto.RagQueryDTO;
 import com.javaee.aiservice.rag.KnowledgeBase;
 import com.javaee.aiservice.rag.Reranker;
 import com.javaee.aiservice.rag.VectorStore;
@@ -7,6 +10,7 @@ import com.javaee.common.model.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +22,7 @@ import java.util.Map;
  * 提供知识库相关的REST API接口
  * 支持基础检索、混合检索和重排序功能
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/ai/rag")
 @Tag(name = "RAG知识库", description = "知识库索引、搜索、问答接口")
@@ -31,6 +36,12 @@ public class RagController {
 
     @Autowired
     private Reranker reranker;
+
+    @Autowired
+    private ChatService chatService;
+
+    @Autowired
+    private PromptEngineeringService promptEngineeringService;
 
     /**
      * 文档索引
@@ -105,34 +116,57 @@ public class RagController {
      */
     @PostMapping("/query")
     @Operation(summary = "知识库问答", description = "基于知识库进行问答，默认使用混合检索加重排序")
-    public Result<Map<String, Object>> query(
-            @Parameter(description = "问题") @RequestBody String question,
-            @Parameter(description = "重排序策略") @RequestParam(defaultValue = "HYBRID") String strategy) {
-        
+    public Result<Map<String, Object>> query(@RequestBody RagQueryDTO dto) {
+        String question = dto.getQuestion();
+        String strategy = dto.getStrategy() != null ? dto.getStrategy() : "HYBRID";
+
+        if (question == null || question.trim().isEmpty()) {
+            return Result.fail("问题内容不能为空");
+        }
+
         Reranker.RerankStrategy rerankStrategy;
         try {
             rerankStrategy = Reranker.RerankStrategy.valueOf(strategy.toUpperCase());
         } catch (IllegalArgumentException e) {
+            log.warn("无效的重排序策略: {}", strategy);
             return Result.fail("无效的重排序策略: " + strategy);
         }
 
-        // 使用混合检索加重排序获取相关文档
-        List<Map<String, Object>> results = knowledgeBase.hybridSearchWithRerank(question, 3, rerankStrategy);
-        
-        StringBuilder context = new StringBuilder();
-        for (Map<String, Object> result : results) {
-            context.append(result.get("content")).append("\n\n");
+        try {
+            // 使用混合检索加重排序获取相关文档
+            List<Map<String, Object>> results = knowledgeBase.hybridSearchWithRerank(question, 3, rerankStrategy);
+
+            StringBuilder context = new StringBuilder();
+            for (Map<String, Object> result : results) {
+                Object content = result.get("content");
+                if (content != null) {
+                    context.append(content.toString()).append("\n\n");
+                }
+            }
+
+            // 调用AI模型生成答案
+            String answer;
+            if (context.length() > 0) {
+                String prompt = promptEngineeringService.createQAPrompt(question, context.toString(), null);
+                answer = chatService.callChatApi(prompt);
+            } else {
+                answer = "知识库中没有找到相关内容，无法生成答案。请先索引相关文档。";
+            }
+
+            Map<String, Object> response = Map.of(
+                "question", question,
+                "context", context.toString(),
+                "answer", answer,
+                "sources", results.stream().map(r -> r.get("id")).toList(),
+                "retrievalStrategy", strategy
+            );
+
+            log.info("知识库问答完成: question={}, sourcesCount={}", question, results.size());
+            return Result.success(response);
+        } catch (Exception e) {
+            log.error("知识库问答失败: {}", e.getMessage(), e);
+            return Result.fail("知识库问答失败: " + e.getMessage());
         }
-
-        Map<String, Object> answer = Map.of(
-            "question", question,
-            "context", context.toString(),
-            "answer", "基于知识库内容，您的问题答案如下：（实际应调用AI模型生成答案）",
-            "sources", results.stream().map(r -> r.get("id")).toList(),
-            "retrievalStrategy", strategy
-        );
-
-        return Result.success(answer);
     }
 
     /**

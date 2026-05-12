@@ -31,6 +31,15 @@
         </div>
 
         <div class="form-item">
+          <label>手机号（可选）</label>
+          <input
+            v-model="phone"
+            type="tel"
+            placeholder="请输入手机号"
+          />
+        </div>
+
+        <div class="form-item">
           <label>密码</label>
           <input
             v-model="password"
@@ -65,6 +74,7 @@ const router = useRouter()
 
 const username = ref('')
 const email = ref('')
+const phone = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -79,9 +89,11 @@ const handleRegister = async () => {
     await register({
       username: username.value,
       email: email.value,
-      password: password.value
+      password: password.value,
+      phone: phone.value || undefined
     })
-    router.push('/login')
+    // 注册成功，跳转登录页并显示成功消息
+    router.push({ path: '/login', query: { registered: 'success', username: username.value } })
   } catch (err: any) {
     error.value = err.message || '注册失败'
   } finally {

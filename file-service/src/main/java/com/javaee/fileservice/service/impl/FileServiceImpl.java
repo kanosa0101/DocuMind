@@ -51,7 +51,7 @@ public class FileServiceImpl implements FileService {
     private final ConcurrentMap<String, ConcurrentMap<Integer, File>> chunkMap = new ConcurrentHashMap<>();
 
     @Override
-    public String upload(MultipartFile file) {
+    public String upload(MultipartFile file, Long userId) {
         try {
             // 生成文件ID
             String fileId = UUID.randomUUID().toString();
@@ -75,13 +75,13 @@ public class FileServiceImpl implements FileService {
                         System.out.println("目录已存在: " + storageDir);
                     }
                 }
-                
+
                 // 使用FileOutputStream保存文件
                 File destFile = storagePath.toFile();
                 System.out.println("目标文件: " + destFile.getAbsolutePath());
                 System.out.println("目标文件是否存在: " + destFile.exists());
                 System.out.println("目标文件是否可写: " + destFile.canWrite());
-                
+
                 try (FileOutputStream fos = new FileOutputStream(destFile)) {
                     byte[] buffer = new byte[1024];
                     int bytesRead;
@@ -125,7 +125,7 @@ public class FileServiceImpl implements FileService {
                 }
             }
 
-            // 保存文件元数据（容错处理，数据库不可用时继续执行）
+            // 保存文件元数据（包含用户ID实现隔离）
             try {
                 com.javaee.fileservice.entity.FileMetadata fileMetadata = new com.javaee.fileservice.entity.FileMetadata();
                 fileMetadata.setFileId(fileId);
@@ -138,6 +138,7 @@ public class FileServiceImpl implements FileService {
                 fileMetadata.setBucketName(fileStorageConfig.getBucketName());
                 fileMetadata.setObjectKey(storageFileName);
                 fileMetadata.setCreateBy("system");
+                fileMetadata.setUserId(userId); // 设置用户ID实现隔离
                 fileMetadataService.saveMetadata(fileMetadata);
             } catch (Exception e) {
                 // 数据库不可用时，继续执行，只记录日志
@@ -151,10 +152,15 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public String[] uploadMultiple(MultipartFile[] files) {
+    public String upload(MultipartFile file) {
+        return upload(file, null);
+    }
+
+    @Override
+    public String[] uploadMultiple(MultipartFile[] files, Long userId) {
         String[] fileIds = new String[files.length];
         for (int i = 0; i < files.length; i++) {
-            fileIds[i] = upload(files[i]);
+            fileIds[i] = upload(files[i], userId);
         }
         return fileIds;
     }
@@ -176,7 +182,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public String mergeChunk(String fileId, String fileName) {
+    public String mergeChunk(String fileId, String fileName, Long userId) {
         try {
             // 获取分片文件
             ConcurrentMap<Integer, File> chunks = chunkMap.get(fileId);
@@ -211,7 +217,7 @@ public class FileServiceImpl implements FileService {
                 Files.write(storagePath, mergedBytes);
                 outputStream.close();
             } else if ("minio".equals(fileStorageConfig.getStorageType())) {
-                // MinIO存储合并（这里简化处理，实际应该使用MinIO的分片上传API）
+                // MinIO存储合并
                 ensureBucketExists(fileStorageConfig.getBucketName());
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -245,7 +251,7 @@ public class FileServiceImpl implements FileService {
             // 清理分片映射
             chunkMap.remove(fileId);
 
-            // 保存文件元数据
+            // 保存文件元数据（包含用户ID）
             try {
                 com.javaee.fileservice.entity.FileMetadata fileMetadata = new com.javaee.fileservice.entity.FileMetadata();
                 fileMetadata.setFileId(fileId);
@@ -258,6 +264,7 @@ public class FileServiceImpl implements FileService {
                 fileMetadata.setBucketName(fileStorageConfig.getBucketName());
                 fileMetadata.setObjectKey(storageFileName);
                 fileMetadata.setCreateBy("system");
+                fileMetadata.setUserId(userId); // 设置用户ID实现隔离
                 fileMetadataService.saveMetadata(fileMetadata);
             } catch (Exception e) {
                 // 数据库不可用时，忽略错误
@@ -277,12 +284,28 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public byte[] download(String fileId, Long userId) {
+        try {
+            // 验证文件是否属于该用户
+            if (userId != null) {
+                com.javaee.fileservice.entity.FileMetadata metadata = fileMetadataService.getMetadata(fileId, userId);
+                if (metadata == null) {
+                    throw new RuntimeException("文件不存在或不属于用户: " + fileId);
+                }
+            }
+            return download(fileId);
+        } catch (Exception e) {
+            throw new RuntimeException("文件下载失败: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public byte[] download(String fileId) {
         try {
             // 尝试从数据库获取文件元数据
             com.javaee.fileservice.entity.FileMetadata fileMetadata = null;
             String storageFileName = null;
-            
+
             try {
                 fileMetadata = fileMetadataService.getMetadata(fileId);
                 if (fileMetadata != null) {
@@ -312,7 +335,7 @@ public class FileServiceImpl implements FileService {
                 // 如果所有扩展名都失败，抛出异常
                 throw new RuntimeException("文件不存在: " + fileId);
             }
-            
+
             // 如果还是没有storageFileName，使用fileId作为默认值
             if (storageFileName == null) {
                 storageFileName = fileId;
@@ -342,236 +365,73 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public void delete(String fileId) {
+    public void delete(String fileId, Long userId) {
         try {
-            // 尝试从数据库获取文件元数据
+            // 验证文件是否属于该用户（用户隔离）
             com.javaee.fileservice.entity.FileMetadata fileMetadata = null;
-            String storageFileName = null;
-            
-            try {
-                fileMetadata = fileMetadataService.getMetadata(fileId);
-                if (fileMetadata != null) {
-                    storageFileName = fileMetadata.getObjectKey();
-                    System.out.println("从数据库获取到文件元数据，存储文件名: " + storageFileName);
-                } else {
-                    System.out.println("数据库中未找到文件元数据: " + fileId);
-                }
-            } catch (Exception e) {
-                // 数据库不可用时，尝试不同的文件扩展名
-                System.out.println("数据库不可用，尝试不同的文件扩展名: " + e.getMessage());
-                // 尝试常见的文件扩展名
-                String[] extensions = {".docx", ".pdf", ".txt", ".jpg", ".png", ".jpeg", ""};
-                boolean deleted = false;
-                for (String ext : extensions) {
-                    try {
-                        String tempFileName = fileId + ext;
-                        System.out.println("尝试删除MinIO文件: " + tempFileName);
-                        System.out.println("MinIO配置: bucket=" + fileStorageConfig.getBucketName());
-                        minioClient.removeObject(
-                                RemoveObjectArgs.builder()
-                                        .bucket(fileStorageConfig.getBucketName())
-                                        .object(tempFileName)
-                                        .build()
-                        );
-                        deleted = true;
-                        System.out.println("成功删除文件: " + tempFileName);
-                        // 继续尝试其他扩展名，确保删除所有可能的文件
-                    } catch (Exception ex) {
-                        // 忽略错误，尝试下一个扩展名
-                        System.out.println("尝试扩展名失败: " + ext + ", 错误: " + ex.getMessage());
-                    }
-                }
-                if (deleted) {
-                    return;
-                } else {
-                    throw new RuntimeException("文件不存在: " + fileId);
-                }
-            }
-            
-            // 如果有存储文件名，直接删除
-            if (storageFileName != null) {
-                System.out.println("使用存储文件名删除文件: " + storageFileName);
-                if ("minio".equals(fileStorageConfig.getStorageType())) {
-                    try {
-                        minioClient.removeObject(
-                                RemoveObjectArgs.builder()
-                                        .bucket(fileStorageConfig.getBucketName())
-                                        .object(storageFileName)
-                                        .build()
-                        );
-                        System.out.println("成功删除文件: " + storageFileName);
-                    } catch (Exception e) {
-                        System.out.println("删除文件失败: " + e.getMessage());
-                        throw new RuntimeException("文件删除失败: " + e.getMessage());
-                    }
-                } else if ("local".equals(fileStorageConfig.getStorageType())) {
-                    try {
-                        Path storagePath = Paths.get(fileStorageConfig.getLocalPath(), storageFileName);
-                        Files.deleteIfExists(storagePath);
-                        System.out.println("成功删除本地文件: " + storagePath);
-                    } catch (Exception e) {
-                        System.out.println("删除本地文件失败: " + e.getMessage());
-                        throw new RuntimeException("文件删除失败: " + e.getMessage());
-                    }
-                } else {
-                    throw new RuntimeException("不支持的存储类型: " + fileStorageConfig.getStorageType());
+            if (userId != null) {
+                fileMetadata = fileMetadataService.getMetadata(fileId, userId);
+                if (fileMetadata == null) {
+                    throw new RuntimeException("文件不存在或不属于用户: " + fileId);
                 }
             } else {
-                // 如果没有存储文件名，尝试使用fileId加不同扩展名删除
-                System.out.println("没有存储文件名，尝试使用fileId加扩展名删除");
-                String[] extensions = {".txt", ".docx", ".pdf", ".jpg", ".png", ".jpeg", ""};
-                boolean deleted = false;
-                for (String ext : extensions) {
-                    String tempFileName = fileId + ext;
-                    try {
-                        if ("minio".equals(fileStorageConfig.getStorageType())) {
-                            minioClient.removeObject(
-                                    RemoveObjectArgs.builder()
-                                            .bucket(fileStorageConfig.getBucketName())
-                                            .object(tempFileName)
-                                            .build()
-                            );
-                            System.out.println("成功删除MinIO文件: " + tempFileName);
-                        } else if ("local".equals(fileStorageConfig.getStorageType())) {
-                            Path storagePath = Paths.get(fileStorageConfig.getLocalPath(), tempFileName);
-                            Files.deleteIfExists(storagePath);
-                            System.out.println("成功删除本地文件: " + storagePath);
-                        }
-                        deleted = true;
-                        break; // 删除成功后退出循环
-                    } catch (Exception ex) {
-                        // 忽略错误，尝试下一个扩展名
-                        System.out.println("尝试删除失败: " + tempFileName + ", 错误: " + ex.getMessage());
-                    }
-                }
-                if (!deleted) {
-                    throw new RuntimeException("文件不存在: " + fileId);
+                fileMetadata = fileMetadataService.getMetadata(fileId);
+            }
+
+            String storageFileName = fileMetadata != null ? fileMetadata.getObjectKey() : null;
+
+            // 删除物理文件
+            if (storageFileName != null) {
+                if ("minio".equals(fileStorageConfig.getStorageType())) {
+                    minioClient.removeObject(
+                            RemoveObjectArgs.builder()
+                                    .bucket(fileStorageConfig.getBucketName())
+                                    .object(storageFileName)
+                                    .build()
+                    );
+                    System.out.println("成功删除MinIO文件: " + storageFileName);
+                } else if ("local".equals(fileStorageConfig.getStorageType())) {
+                    Path storagePath = Paths.get(fileStorageConfig.getLocalPath(), storageFileName);
+                    Files.deleteIfExists(storagePath);
                 }
             }
-            
-            // 删除文件元数据
-            try {
-                fileMetadataService.deleteMetadata(fileId);
-            } catch (Exception e) {
-                // 数据库不可用时，忽略错误
-                System.out.println("数据库不可用，跳过元数据删除: " + e.getMessage());
-            }
+
+            // 删除文件元数据（带用户验证）
+            fileMetadataService.deleteMetadata(fileId, userId);
         } catch (Exception e) {
             throw new RuntimeException("文件删除失败: " + e.getMessage(), e);
         }
     }
 
     @Override
-    public void rename(String fileId, String newName) {
+    public void rename(String fileId, String newName, Long userId) {
         try {
-            // 尝试从数据库获取文件元数据
+            // 验证文件是否属于该用户（用户隔离）
             com.javaee.fileservice.entity.FileMetadata fileMetadata = null;
-            String storageFileName = null;
-            
-            try {
+            if (userId != null) {
+                fileMetadata = fileMetadataService.getMetadata(fileId, userId);
+                if (fileMetadata == null) {
+                    throw new RuntimeException("文件不存在或不属于用户: " + fileId);
+                }
+            } else {
                 fileMetadata = fileMetadataService.getMetadata(fileId);
-                if (fileMetadata != null) {
-                    storageFileName = fileMetadata.getObjectKey();
-                }
-            } catch (Exception e) {
-                // 数据库不可用时，尝试不同的文件扩展名
-                System.out.println("数据库不可用，尝试不同的文件扩展名: " + e.getMessage());
-            }
-            
-            // 如果没有找到存储文件名，使用fileId作为默认值（去除扩展名）
-            if (storageFileName == null) {
-                // 去除fileId中的扩展名
-                int dotIndex = fileId.lastIndexOf('.');
-                if (dotIndex > 0) {
-                    storageFileName = fileId.substring(0, dotIndex);
-                } else {
-                    storageFileName = fileId;
+                if (fileMetadata == null) {
+                    throw new RuntimeException("文件不存在: " + fileId);
                 }
             }
-            
-            String oldFileName = storageFileName;
-            String fileExtension = FileUtils.getFileExtension(newName);
-            // 新存储文件名使用fileId（去除扩展名）加上新的文件名
-            int dotIndex = fileId.lastIndexOf('.');
-            String fileIdWithoutExt = fileId;
-            if (dotIndex > 0) {
-                fileIdWithoutExt = fileId.substring(0, dotIndex);
-            }
-            // 直接使用新文件名作为存储文件名
-            String newStorageFileName = newName;
 
-            // 根据存储类型重命名文件
-            if ("local".equals(fileStorageConfig.getStorageType())) {
-                // 本地存储
-                Path oldPath = Paths.get(fileStorageConfig.getLocalPath(), oldFileName);
-                Path newPath = Paths.get(fileStorageConfig.getLocalPath(), newStorageFileName);
-                Files.move(oldPath, newPath);
-            } else if ("minio".equals(fileStorageConfig.getStorageType())) {
-                // MinIO存储（先复制再删除）
-                try {
-                    // 尝试不同的文件扩展名找到原文件
-                    String[] extensions = {"", ".txt", ".docx", ".pdf", ".jpg", ".png", ".jpeg"};
-                    String foundOldFileName = null;
-                    
-                    for (String ext : extensions) {
-                        try {
-                            String tempOldFileName = oldFileName + ext;
-                            // 检查文件是否存在
-                            minioClient.statObject(
-                                    StatObjectArgs.builder()
-                                            .bucket(fileStorageConfig.getBucketName())
-                                            .object(tempOldFileName)
-                                            .build()
-                            );
-                            foundOldFileName = tempOldFileName;
-                            break;
-                        } catch (Exception ex) {
-                            // 忽略错误，尝试下一个扩展名
-                        }
-                    }
-                    
-                    if (foundOldFileName != null) {
-                        // 复制文件
-                        minioClient.copyObject(
-                                CopyObjectArgs.builder()
-                                        .bucket(fileStorageConfig.getBucketName())
-                                        .object(newStorageFileName)
-                                        .source(
-                                                CopySource.builder()
-                                                        .bucket(fileStorageConfig.getBucketName())
-                                                        .object(foundOldFileName)
-                                                        .build()
-                                        )
-                                        .build()
-                        );
-                        // 删除原文件
-                        minioClient.removeObject(
-                                RemoveObjectArgs.builder()
-                                        .bucket(fileStorageConfig.getBucketName())
-                                        .object(foundOldFileName)
-                                        .build()
-                        );
-                        System.out.println("MinIO文件重命名成功: " + foundOldFileName + " -> " + newStorageFileName);
-                    } else {
-                        System.out.println("MinIO中未找到原文件: " + oldFileName);
-                    }
-                } catch (Exception e) {
-                    // 如果复制失败，尝试直接使用新名称上传（简化处理）
-                    System.out.println("MinIO复制失败，尝试直接使用新名称: " + e.getMessage());
-                }
-            }
+            // 只更新数据库中的显示文件名，不改变MinIO中的objectKey
+            // 这样可以保持文件在存储中的位置不变
 
             // 更新文件元数据
             try {
-                if (fileMetadata != null) {
-                    fileMetadata.setFileName(newName);
-                    fileMetadata.setOriginalFileName(newName);
-                    fileMetadata.setObjectKey(newStorageFileName);
-                    fileMetadataService.updateMetadata(fileMetadata);
-                }
+                fileMetadata.setFileName(newName);
+                fileMetadata.setOriginalFileName(newName);
+                // 不更新objectKey，保持存储位置不变
+                fileMetadataService.updateMetadata(fileMetadata);
+                System.out.println("文件元数据重命名成功: " + fileId + " -> " + newName);
             } catch (Exception e) {
-                // 数据库不可用时，忽略错误
-                System.out.println("数据库不可用，跳过元数据更新: " + e.getMessage());
+                throw new RuntimeException("更新文件元数据失败: " + e.getMessage(), e);
             }
         } catch (Exception e) {
             throw new RuntimeException("文件重命名失败: " + e.getMessage(), e);

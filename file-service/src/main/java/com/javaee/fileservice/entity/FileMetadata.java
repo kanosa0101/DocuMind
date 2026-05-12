@@ -41,6 +41,8 @@ public class FileMetadata {
 
     private String createBy;
 
+    private Long userId;
+
     private LocalDateTime createTime;
 
     private LocalDateTime updateTime;

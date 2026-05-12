@@ -30,6 +30,16 @@ public class UserVO {
     private String phone;
 
     /**
+     * 头像URL
+     */
+    private String avatar;
+
+    /**
+     * 昵称
+     */
+    private String nickname;
+
+    /**
      * 角色
      */
     private String role;

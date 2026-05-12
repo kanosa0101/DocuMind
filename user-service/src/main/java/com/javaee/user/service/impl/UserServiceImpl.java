@@ -33,6 +33,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
 
+    @Autowired
+    private JwtUtils jwtUtils;
+
     @Override
     public LoginVO login(LoginDTO loginDTO) {
         // 校验参数
@@ -56,8 +59,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         }
 
         // 生成令牌
-        String accessToken = JwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
-        String refreshToken = JwtUtils.generateRefreshToken(user.getId());
+        String accessToken = jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
+        String refreshToken = jwtUtils.generateRefreshToken(user.getId());
+
+        // 更新最后登录时间
+        user.setLastLoginTime(LocalDateTime.now());
+        updateById(user);
 
         // 构建响应
         LoginVO loginVO = new LoginVO();
@@ -86,8 +93,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         if (userMapper.selectByEmail(registerDTO.getEmail()) != null) {
             throw new BusinessException("邮箱已被注册");
         }
-        if (userMapper.selectByPhone(registerDTO.getPhone()) != null) {
-            throw new BusinessException("手机号已被注册");
+        // 手机号为可选字段，有值时才检查唯一性
+        if (registerDTO.getPhone() != null && !registerDTO.getPhone().isEmpty()) {
+            if (userMapper.selectByPhone(registerDTO.getPhone()) != null) {
+                throw new BusinessException("手机号已被注册");
+            }
         }
 
         // 创建用户
@@ -133,13 +143,13 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         ValidateUtils.notEmpty(refreshToken, "刷新令牌不能为空");
         try {
             // 解析刷新令牌
-            Long userId = JwtUtils.getUserId(refreshToken);
+            Long userId = jwtUtils.getUserId(refreshToken);
             User user = getById(userId);
             if (user == null) {
                 throw new BusinessException(ErrorCodeEnum.USER_NOT_FOUND);
             }
             // 生成新的访问令牌
-            return JwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
+            return jwtUtils.generateToken(user.getId(), user.getUsername(), user.getRole());
         } catch (Exception e) {
             throw new BusinessException(ErrorCodeEnum.TOKEN_ERROR);
         }

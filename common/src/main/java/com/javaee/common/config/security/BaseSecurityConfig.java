@@ -3,6 +3,7 @@ package com.javaee.common.config.security;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -32,10 +33,9 @@ public class BaseSecurityConfig {
     protected void applyBaseSecurityConfig(HttpSecurity http) throws Exception {
         http
             // 禁用CSRF保护，适合API服务
-            .csrf().disable()
+            .csrf(AbstractHttpConfigurer::disable)
             // 使用无状态会话管理
-            .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-            .and()
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             // 添加JWT认证过滤器
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
     }

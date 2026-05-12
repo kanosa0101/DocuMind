@@ -16,9 +16,13 @@ public class DocumentUpdateDTO {
 
     private String content;
 
+    private String summary;
+
     private String category;
 
     private List<String> tags;
+
+    private List<String> keywords;
 
     private String changeLog;
 }

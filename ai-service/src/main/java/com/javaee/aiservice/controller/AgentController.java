@@ -3,10 +3,12 @@ package com.javaee.aiservice.controller;
 import com.javaee.aiservice.agent.ChatReactAgent;
 import com.javaee.aiservice.agent.KnowledgeIndexAgent;
 import com.javaee.aiservice.agent.PlanExecuteAgent;
+import com.javaee.aiservice.dto.AgentChatDTO;
 import com.javaee.common.model.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,6 +19,7 @@ import java.util.Map;
  * Agent控制器
  * 提供AI Agent相关的REST API接口
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/ai/agent")
 @Tag(name = "AI Agent", description = "AI Agent相关接口")
@@ -49,9 +52,18 @@ public class AgentController {
     @Operation(summary = "发送消息", description = "向对话Agent发送消息")
     public Result<Map<String, Object>> chat(
             @Parameter(description = "对话ID") @RequestParam String conversationId,
-            @Parameter(description = "用户输入") @RequestBody String userInput) {
-        Map<String, Object> result = chatReactAgent.chat(conversationId, userInput, Map.of());
-        return Result.success(result);
+            @RequestBody AgentChatDTO dto) {
+        String userInput = dto.getUserInput();
+        if (userInput == null || userInput.trim().isEmpty()) {
+            return Result.fail("用户输入内容不能为空");
+        }
+        try {
+            Map<String, Object> result = chatReactAgent.chat(conversationId, userInput, Map.of());
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("对话处理失败: {}", e.getMessage(), e);
+            return Result.fail("对话处理失败: " + e.getMessage());
+        }
     }
 
     /**

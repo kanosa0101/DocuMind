@@ -34,6 +34,7 @@
           {{ loading ? '登录中...' : '登录' }}
         </button>
 
+        <p v-if="successMsg" class="success-msg">{{ successMsg }}</p>
         <p v-if="error" class="error-msg">{{ error }}</p>
       </form>
 
@@ -47,17 +48,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref('')
+const successMsg = ref('')
+
+onMounted(() => {
+  // 处理注册成功后的提示消息
+  if (route.query.registered === 'success') {
+    successMsg.value = `账号 ${route.query.username || ''} 注册成功，请登录`
+  }
+})
 
 const handleLogin = async () => {
   if (!username.value || !password.value) return
@@ -73,7 +83,9 @@ const handleLogin = async () => {
   loading.value = false
 
   if (success) {
-    router.push('/dashboard')
+    // 登录成功后跳转到redirect指定的页面或默认首页
+    const redirect = route.query.redirect as string
+    router.push(redirect || '/dashboard')
   } else {
     error.value = '用户名或密码错误'
   }
@@ -174,6 +186,12 @@ const handleLogin = async () => {
 
 .error-msg {
   color: var(--color-error);
+  font-size: var(--font-size-sm);
+  text-align: center;
+}
+
+.success-msg {
+  color: var(--color-success);
   font-size: var(--font-size-sm);
   text-align: center;
 }

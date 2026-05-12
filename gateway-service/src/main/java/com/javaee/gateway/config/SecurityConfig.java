@@ -8,6 +8,8 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 
 /**
  * 安全配置
+ * 注意：网关通过AuthGlobalFilter进行JWT认证，此处配置基本安全策略
+ * Spring Security放行所有请求，由AuthGlobalFilter统一处理认证逻辑
  */
 @Configuration
 @EnableWebFluxSecurity
@@ -18,11 +20,13 @@ public class SecurityConfig {
         http
             // 禁用CSRF保护
             .csrf(csrf -> csrf.disable())
-            // 配置路径权限
+            // 禁用表单登录
+            .formLogin(formLogin -> formLogin.disable())
+            // 禁用HTTP Basic认证
+            .httpBasic(httpBasic -> httpBasic.disable())
+            // 放行所有请求，由AuthGlobalFilter统一处理JWT认证
+            // 这样避免Spring Security在AuthGlobalFilter之前拦截请求导致认证失败
             .authorizeExchange(exchanges -> exchanges
-                // 公开接口
-                .pathMatchers("/api/users/register", "/api/users/login").permitAll()
-                // 其他接口需要认证
                 .anyExchange().permitAll()
             );
         return http.build();

@@ -14,15 +14,15 @@ public interface UserMapper extends BaseMapper<User> {
      * @param username 用户名
      * @return 用户信息
      */
-    @Select("SELECT * FROM user WHERE username = #{username}")
+    @Select("SELECT * FROM sys_user WHERE username = #{username}")
     User selectByUsername(String username);
 
     /**
      * 根据邮箱查询用户
-     * @param email 邮箱
+     * @param email 箱
      * @return 用户信息
      */
-    @Select("SELECT * FROM user WHERE email = #{email}")
+    @Select("SELECT * FROM sys_user WHERE email = #{email}")
     User selectByEmail(String email);
 
     /**
@@ -30,6 +30,6 @@ public interface UserMapper extends BaseMapper<User> {
      * @param phone 手机号
      * @return 用户信息
      */
-    @Select("SELECT * FROM user WHERE phone = #{phone}")
+    @Select("SELECT * FROM sys_user WHERE phone = #{phone}")
     User selectByPhone(String phone);
 }

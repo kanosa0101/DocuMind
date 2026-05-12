@@ -27,7 +27,7 @@ services:
     container_name: redis
     command: redis-server --requirepass redis123
     ports:
-      - "6379:6379"
+      - "28379:6379"
     volumes:
       - redis-data:/data
     networks:
@@ -45,8 +45,8 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: rabbit123
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "28672:5672"
+      - "29672:15672"
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
     networks:
@@ -66,8 +66,8 @@ services:
       MINIO_ROOT_PASSWORD: minio123
     command: server /data --console-address ":9001"
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "19000:9000"
+      - "19001:9001"
     volumes:
       - minio-data:/data
     networks:
@@ -86,8 +86,9 @@ services:
       MODE: standalone
       PREFER_HOST_MODE: hostname
     ports:
-      - "8848:8848"
-      - "9848:9848"
+      - "18848:8848"
+      - "19848:9848"
+      - "19849:9849"
     networks:
       - documind-net
     healthcheck:
@@ -106,8 +107,13 @@ services:
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PASSWORD: redis123
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: rabbit123
+      SPRING_AMQP_DESERIALIZATION_TRUST_ALL: "true"
+      JWT_SECRET: documind_jwt_secret_key_2024_secure_random_string
     ports:
-      - "9080:8080"
+      - "28080:8080"
     depends_on:
       nacos:
         condition: service_healthy
@@ -125,8 +131,14 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PASSWORD: redis123
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: rabbit123
+      JWT_SECRET: documind_jwt_secret_key_2024_secure_random_string
     ports:
-      - "9081:8081"
+      - "28081:8081"
     depends_on:
       nacos:
         condition: service_healthy
@@ -144,11 +156,16 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PASSWORD: redis123
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: rabbit123
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: minio123
     ports:
-      - "9082:8082"
+      - "28082:8082"
     depends_on:
       nacos:
         condition: service_healthy
@@ -173,8 +190,11 @@ services:
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: minio123
+      OPENAI_API_BASE: https://api.deepseek.com/v1
+      OPENAI_API_KEY: your_deepseek_api_key_here
+      OPENAI_MODEL: deepseek-chat
     ports:
-      - "9083:8083"
+      - "28083:8083"
     depends_on:
       nacos:
         condition: service_healthy
@@ -194,11 +214,16 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PASSWORD: redis123
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: rabbit123
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: minio123
     ports:
-      - "9084:8084"
+      - "28084:8084"
     depends_on:
       nacos:
         condition: service_healthy

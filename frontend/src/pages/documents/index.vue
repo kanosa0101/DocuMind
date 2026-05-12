@@ -98,7 +98,7 @@
             <div class="version-info">
               <span class="version-number">v{{ ver.versionNumber }}</span>
               <span class="version-time">{{ formatDate(ver.createTime) }}</span>
-              <span v-if="ver.changeSummary" class="version-summary">{{ ver.changeSummary }}</span>
+              <span v-if="ver.changeLog" class="version-summary">{{ ver.changeLog }}</span>
             </div>
             <div class="version-actions">
               <button @click="previewVersion(ver)" title="预览">👁️</button>

@@ -101,11 +101,16 @@ const sendMessage = async () => {
 }
 
 const clearChat = async () => {
-  if (conversationId.value) {
-    await endConversation(conversationId.value)
+  try {
+    if (conversationId.value) {
+      await endConversation(conversationId.value)
+    }
+  } catch (error: any) {
+    console.warn('结束对话失败:', error.message || error)
+  } finally {
+    messages.value = []
+    conversationId.value = null
   }
-  messages.value = []
-  conversationId.value = null
 }
 </script>
 

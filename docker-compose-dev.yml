@@ -6,14 +6,19 @@ services:
     container_name: user-service
     environment:
       SPRING_APPLICATION_NAME: user
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: documind-infra_nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://documind-infra_mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PASSWORD: redis123
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: rabbit123
     networks:
-      - docai-compose-network
+      - documind-net
     ports:
-      - "9081:8081"
+      - "28081:8081"
 
   gateway:
     image: docai/gateway-service:1.0.0
@@ -21,29 +26,37 @@ services:
     environment:
       SPRING_APPLICATION_NAME: gateway
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_REDIS_HOST: documind-infra_redis
+      SPRING_REDIS_HOST: redis
       SPRING_REDIS_PASSWORD: redis123
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: rabbit123
     networks:
-      - docai-compose-network
+      - documind-net
     ports:
-      - "9080:8080"
+      - "28080:8080"
 
   file:
     image: docai/file-service:1.0.0
     container_name: file-service
     environment:
       SPRING_APPLICATION_NAME: file
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: documind-infra_nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://documind-infra_mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: admin123
-      MINIO_ENDPOINT: http://documind-infra_minio:9000
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PASSWORD: redis123
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: rabbit123
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: minio123
     networks:
-      - docai-compose-network
+      - documind-net
     ports:
-      - "9082:8082"
+      - "28082:8082"
 
   ai:
     image: docai/ai-service:1.0.0
@@ -51,36 +64,41 @@ services:
     environment:
       SPRING_APPLICATION_NAME: ai
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_REDIS_HOST: documind-infra_redis
+      SPRING_REDIS_HOST: redis
       SPRING_REDIS_PASSWORD: redis123
-      SPRING_RABBITMQ_HOST: documind-infra_rabbitmq
+      SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_USERNAME: admin
       SPRING_RABBITMQ_PASSWORD: rabbit123
-      MINIO_ENDPOINT: http://documind-infra_minio:9000
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: minio123
     networks:
-      - docai-compose-network
+      - documind-net
     ports:
-      - "9083:8083"
+      - "28083:8083"
 
   document:
     image: docai/document-service:1.0.0
     container_name: document-service
     environment:
       SPRING_APPLICATION_NAME: document
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: documind-infra_nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://documind-infra_mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: admin123
-      MINIO_ENDPOINT: http://documind-infra_minio:9000
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PASSWORD: redis123
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: rabbit123
+      MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: admin
       MINIO_SECRET_KEY: minio123
     networks:
-      - docai-compose-network
+      - documind-net
     ports:
-      - "9084:8084"
+      - "28084:8084"
 
 networks:
-  docai-compose-network:
-    external: true
+  documind-net:
+    driver: bridge

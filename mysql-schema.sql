@@ -179,6 +179,31 @@ CREATE TABLE `file_info` (
     KEY `idx_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文件表';
 
+-- 文件元数据表 (file-service 使用)
+CREATE TABLE `file_metadata` (
+    `id` varchar(36) NOT NULL COMMENT '主键ID',
+    `file_id` varchar(36) NOT NULL COMMENT '文件唯一标识',
+    `file_name` varchar(255) DEFAULT NULL COMMENT '存储文件名',
+    `original_file_name` varchar(255) DEFAULT NULL COMMENT '原始文件名',
+    `file_path` varchar(500) DEFAULT NULL COMMENT '文件路径',
+    `file_type` varchar(50) DEFAULT NULL COMMENT '文件类型(MIME)',
+    `file_size` bigint(20) DEFAULT 0 COMMENT '文件大小(字节)',
+    `md5` varchar(32) DEFAULT NULL COMMENT '文件MD5校验值',
+    `storage_type` varchar(20) DEFAULT 'minio' COMMENT '存储类型 local/minio',
+    `bucket_name` varchar(100) DEFAULT NULL COMMENT 'MinIO存储桶名称',
+    `object_key` varchar(255) DEFAULT NULL COMMENT 'MinIO对象键',
+    `status` varchar(20) DEFAULT 'ACTIVE' COMMENT '状态 ACTIVE/DELETED',
+    `create_by` varchar(50) DEFAULT NULL COMMENT '创建者',
+    `user_id` bigint(20) DEFAULT NULL COMMENT '上传用户ID（用户隔离）',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_file_id` (`file_id`),
+    KEY `idx_file_name` (`file_name`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文件元数据表';
+
 -- 文档表
 CREATE TABLE `doc_info` (
     `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '文档ID',
@@ -230,10 +255,12 @@ CREATE TABLE `ai_task` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI任务表';
 
 -- 插入默认管理员用户
--- 密码: admin123 (实际项目中应使用加密密码)
+-- 密码: admin123 (BCrypt加密后)
+-- BCrypt加密格式：$2a$10$...
 INSERT INTO `sys_user` (`username`, `password`, `email`, `nickname`, `role`, `status`)
-VALUES ('admin', 'admin123', 'admin@documind.com', '系统管理员', 'admin', 1);
+VALUES ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'admin@documind.com', '系统管理员', 'admin', 1);
 
 -- 插入默认普通用户
+-- 密码: user123 (BCrypt加密后)
 INSERT INTO `sys_user` (`username`, `password`, `email`, `nickname`, `role`, `status`)
-VALUES ('user', 'user123', 'user@documind.com', '普通用户', 'user', 1);
+VALUES ('user', '$2a$10$EqKcp1WFKVQISheBxmXJWeOCB0hUJLBh2Z5yGmJWJQhZaWJQhZaW', 'user@documind.com', '普通用户', 'user', 1);

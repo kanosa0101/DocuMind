@@ -45,6 +45,10 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = savedUser
       return true
     }
+    // 认证信息无效，清除token
+    if (savedUser || tokenManager.getTokenInfo()) {
+      tokenManager.clearTokens()
+    }
     return false
   }
 

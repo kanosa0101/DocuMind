@@ -7,6 +7,7 @@ import java.util.List;
 
 /**
  * 文档VO
+ * 字段名与前端接口定义保持一致
  */
 @Data
 public class DocumentVO {
@@ -31,6 +32,11 @@ public class DocumentVO {
 
     private String status;
 
+    private String userId;
+
+    /**
+     * 创建者（对应前端的createdBy字段）
+     */
     private String createdBy;
 
     private LocalDateTime createTime;

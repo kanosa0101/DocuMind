@@ -1,6 +1,6 @@
 package com.javaee.gateway.filter;
 
-import com.javaee.common.utils.JwtUtils;
+import com.javaee.gateway.config.JwtConfig;
 import com.javaee.gateway.config.RabbitMQConfig;
 import com.javaee.gateway.util.RabbitMQUtil;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +23,7 @@ import java.util.Map;
 
 /**
  * JWT鉴权全局过滤器
+ * 注意：白名单只包含必要的公开接口，避免过于宽松的权限设置
  */
 @Slf4j
 @Component
@@ -31,12 +32,14 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     @Autowired
     private RabbitMQUtil rabbitMQUtil;
 
-    // 不需要鉴权的路径
+    @Autowired
+    private JwtConfig jwtConfig;
+
+    // 不需要鉴权的路径（移除了过于宽松的通配符）
     private static final List<String> WHITE_LIST = List.of(
             "/api/users/login",
             "/api/users/register",
-            "/api/users/refresh",
-            "/api/users/**"
+            "/api/users/refresh"
     );
 
     @Override
@@ -69,7 +72,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         String token = authHeader.substring(7);
 
         // 验证令牌
-        if (!JwtUtils.validateToken(token)) {
+        if (!jwtConfig.validateToken(token)) {
             log.warn("令牌无效: {} {}", method, path);
             sendGatewayAlert("INVALID_TOKEN", "无效的访问令牌: " + path);
             return unauthorized(exchange);
@@ -77,9 +80,9 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
         // 令牌有效，将用户信息存储到请求头中
         try {
-            Long userId = JwtUtils.getUserId(token);
-            String username = JwtUtils.getUsername(token);
-            String role = JwtUtils.getRole(token);
+            Long userId = jwtConfig.getUserId(token);
+            String username = jwtConfig.getUsername(token);
+            String role = jwtConfig.getRole(token);
 
             // 创建新的请求头
             ServerHttpRequest.Builder requestBuilder = request.mutate();

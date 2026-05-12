@@ -7,6 +7,7 @@ import com.javaee.common.model.Result;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,6 +23,7 @@ import java.nio.charset.StandardCharsets;
  * AI控制器
  * 提供AI处理和文件管理相关的REST API接口
  */
+@Slf4j
 @RestController
 @RequestMapping("/api/ai")
 @Tag(name = "AI处理", description = "文档摘要、关键词提取、文档分析等AI处理接口")
@@ -105,23 +107,32 @@ public class AIController {
     @Operation(summary = "文件下载", description = "从MinIO服务器下载文件")
     public ResponseEntity<org.springframework.core.io.Resource> downloadFile(FileDownloadDTO dto) {
         try {
+            log.info("文件下载请求: bucketName={}, objectName={}", dto.getBucketName(), dto.getObjectName());
             InputStream inputStream = fileDownloadService.downloadFile(dto);
-            
+
             String filename = dto.getObjectName();
             if (filename.contains("/")) {
                 filename = filename.substring(filename.lastIndexOf("/") + 1);
             }
-            
-            org.springframework.core.io.InputStreamResource resource = 
+
+            org.springframework.core.io.InputStreamResource resource =
                 new org.springframework.core.io.InputStreamResource(inputStream);
-            
+
+            log.info("文件下载成功: {}", filename);
             return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, 
+                .header(HttpHeaders.CONTENT_DISPOSITION,
                     "attachment; filename=\"" + URLEncoder.encode(filename, StandardCharsets.UTF_8) + "\"")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .body(resource);
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().build();
+            log.error("文件下载失败: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                .body(new org.springframework.core.io.InputStreamResource(
+                    new java.io.ByteArrayInputStream(
+                        ("{\"code\":500,\"message\":\"文件下载失败: " + e.getMessage() + "\"}").getBytes()
+                    )
+                ));
         }
     }
 

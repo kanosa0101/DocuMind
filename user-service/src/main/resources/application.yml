@@ -1,14 +1,14 @@
 spring:
   application:
     name: user
-  
+
   # 数据库配置
   datasource:
-    url: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-    username: root
-    password: admin123
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:doc_ai}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:admin123}
     driver-class-name: com.mysql.cj.jdbc.Driver
-  
+
   # 禁用 Spring Cloud 兼容性检查
   cloud:
     compatibility-verifier:
@@ -16,7 +16,7 @@ spring:
     # Nacos 服务注册发现配置
     nacos:
       discovery:
-        server-addr: nacos:8848
+        server-addr: ${NACOS_HOST:localhost}:${NACOS_PORT:8848}
         namespace: public
         timeout: 30000
       client:
@@ -26,9 +26,9 @@ spring:
   # Redis配置
   data:
     redis:
-      host: redis
-      port: 6379
-      password: redis123
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:redis123}
       database: 0
       timeout: 10000
       lettuce:
@@ -40,10 +40,10 @@ spring:
 
   # RabbitMQ配置
   rabbitmq:
-    host: rabbitmq
-    port: 5672
-    username: admin
-    password: rabbit123
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:admin}
+    password: ${RABBITMQ_PASSWORD:rabbit123}
     virtual-host: /
     listener:
       simple:
@@ -59,7 +59,8 @@ mybatis-plus:
   type-aliases-package: com.javaee.user.entity
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 使用Slf4j日志实现，避免StdOutImpl在生产环境泄露敏感信息
+    log-impl: ${MYBATIS_LOG_IMPL:org.apache.ibatis.logging.slf4j.Slf4jImpl}
 
 # 服务器配置
 server:
@@ -71,5 +72,11 @@ server:
 # 日志配置
 logging:
   level:
-    com.javaee.user: debug
-    org.springframework.security: info
+    com.javaee.user: ${LOG_LEVEL_APP:info}
+    org.springframework.security: warn
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:your-default-secret-key-please-change-in-production}
+  token-expiration: ${JWT_TOKEN_EXPIRATION:30}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:168}

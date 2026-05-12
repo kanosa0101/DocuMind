@@ -1,4 +1,4 @@
-package com.javaee.documentservice.entity;
+package com.javaee.aiservice.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
@@ -8,25 +8,30 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 文档版本实体类
- * 用于存储在doc_version表中
+ * AI任务实体类
  */
 @Data
-@TableName("doc_version")
-public class DocumentVersion {
+@TableName("ai_task")
+public class AiTask {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private String taskType;
+
+    private String inputData;
+
+    private String outputData;
+
     private Long docId;
-
-    private Integer version;
-
-    private String content;
-
-    private String changeSummary;
 
     private Long userId;
 
+    private String status;
+
+    private String errorMsg;
+
     private LocalDateTime createTime;
+
+    private LocalDateTime completeTime;
 }

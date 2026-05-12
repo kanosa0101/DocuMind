@@ -22,7 +22,7 @@ services:
     networks:
       - docai-network
     ports:
-      - "9090:9090"
+      - "29090:9090"
 
   # Grafana 服务
   grafana:
@@ -42,7 +42,7 @@ services:
     networks:
       - docai-network
     ports:
-      - "3000:3000"
+      - "23000:3000"
 
   # Node Exporter (用于收集节点指标)
   node-exporter:
@@ -71,7 +71,7 @@ services:
 
 networks:
   docai-network:
-    external: true
+    driver: bridge
 
 volumes:
   prometheus-config:

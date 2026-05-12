@@ -25,11 +25,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onUnmounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 const searchQuery = ref('')
 
@@ -41,7 +42,8 @@ const handleSearch = () => {
 
 const executeSearch = () => {
   if (searchQuery.value.trim()) {
-    router.push({ path: '/search', query: { q: searchQuery.value } })
+    // 搜索功能暂未实现，跳转到文件中心并传递搜索参数
+    router.push({ path: '/files', query: { search: searchQuery.value } })
   }
 }
 
@@ -53,11 +55,17 @@ const handleLogout = async () => {
 // 全局快捷键
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.ctrlKey && e.key === 'k') {
-    document.querySelector('.search-input')?.focus()
+    e.preventDefault()
+    document.querySelector<HTMLInputElement>('.search-input')?.focus()
   }
 }
 
 document.addEventListener('keydown', handleKeydown)
+
+// 组件销毁时移除事件监听器，防止内存泄漏
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeydown)
+})
 </script>
 
 <style scoped>

@@ -321,11 +321,16 @@ async function handleProcess() {
     const result: any = {}
 
     if (doSummarize.value) {
-      result.summary = await summarize({ content: processContent.value })
+      const summaryResult = await summarize({ content: processContent.value, maxLength: 200 })
+      result.summary = summaryResult.summary
+      result.originalLength = summaryResult.originalLength
+      result.summaryLength = summaryResult.summaryLength
+      result.compressionRatio = summaryResult.compressionRatio
     }
 
     if (doKeywords.value) {
-      result.keywords = await extractKeywords({ content: processContent.value, count: 10 })
+      const keywordResult = await extractKeywords({ content: processContent.value, count: 10 })
+      result.keywords = keywordResult.keywords
     }
 
     if (doAnalyze.value) {

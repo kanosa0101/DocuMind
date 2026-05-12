@@ -54,16 +54,18 @@ public class SecurityConfig extends BaseSecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         // 应用基础安全配置
         applyBaseSecurityConfig(http);
-        
+
         http
             // 授权配置
             .authorizeHttpRequests(authorize -> authorize
                 // 确保Swagger相关路径的匹配规则在最前面
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
-                // 允许登录和注册接口免认证访问
+                // 允许登录和注册接口免认证访问（与网关白名单一致）
                 .requestMatchers("/api/users/login", "/api/users/register").permitAll()
-                // 允许获取用户信息接口免认证访问（用于测试）
-                .requestMatchers("/api/users/**").permitAll()
+                // 允许刷新令牌接口免认证访问（与网关白名单一致）
+                .requestMatchers("/api/users/refresh").permitAll()
+                // 其他用户接口需要认证
+                .requestMatchers("/api/users/**").authenticated()
                 // 允许静态资源访问
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 允许健康检查等端点访问

@@ -90,6 +90,12 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
+        <!-- MyBatis Plus -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+        </dependency>
+
         <!-- 阿里云百炼 dashscope SDK -->
         <dependency>
             <groupId>com.alibaba</groupId>

@@ -9,7 +9,15 @@ export async function createDocument(data: { title: string; content: string; fil
 }
 
 // 更新文档
-export async function updateDocument(id: string, data: { title?: string; content?: string; summary?: string; keywords?: string[] }): Promise<DocumentVO> {
+export async function updateDocument(id: string, data: {
+  title?: string
+  content?: string
+  summary?: string
+  category?: string
+  keywords?: string[]
+  tags?: string[]
+  changeLog?: string
+}): Promise<DocumentVO> {
   return api.put<DocumentVO>(`/api/documents/${id}`, data)
 }
 
