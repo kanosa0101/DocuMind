@@ -22,3 +22,19 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# ----- 环境变量文件（敏感信息） -----
+.env
+.env.local
+.env.development
+.env.production
+.env.*.local
+
+# ----- 测试覆盖率 -----
+coverage/
+*.lcov
+.nyc_output/
+
+# ----- 构建缓存 -----
+.vite/
+.cache/
