@@ -34,6 +34,10 @@ public class RedisConfig {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         objectMapper.activateDefaultTyping(LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
+        // 配置UTF-8编码，确保中文不乱码
+        objectMapper.configure(com.fasterxml.jackson.core.JsonGenerator.Feature.ESCAPE_NON_ASCII, false);
+
+        jackson2JsonRedisSerializer.setObjectMapper(objectMapper);
 
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();
 

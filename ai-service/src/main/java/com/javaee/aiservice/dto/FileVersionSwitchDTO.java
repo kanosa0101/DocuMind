@@ -11,19 +11,20 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class FileVersionSwitchDTO {
-    
+
     /**
      * 存储桶名称
      */
     private String bucketName;
-    
+
     /**
      * 对象名称（文件路径）
      */
     private String objectName;
-    
+
     /**
      * 目标版本号
      */
     private String targetVersionId;
-}
+
+    }

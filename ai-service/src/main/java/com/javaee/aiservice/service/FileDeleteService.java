@@ -141,7 +141,7 @@ public class FileDeleteService {
     private FileDeleteVO deleteWithRecycle(String bucketName, String objectName, String deleter) {
         log.info("执行删除（带回收站）: bucket={}, object={}", bucketName, objectName);
 
-        String recycleId = recycleBinService.moveToRecycleBin(bucketName, objectName, deleter);
+        String recycleId = recycleBinService.moveToRecycleBin(bucketName, objectName, Long.valueOf(deleter));
 
         FileDeleteVO vo = new FileDeleteVO();
         vo.setStatus("recycle");

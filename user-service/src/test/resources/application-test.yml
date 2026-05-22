@@ -1,0 +1,38 @@
+server:
+  port: 8082
+
+spring:
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  sql:
+    init:
+      mode: always
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.client.serviceregistry.ServiceRegistryAutoConfiguration
+      - com.alibaba.cloud.nacos.NacosServiceRegistryAutoConfiguration
+      - org.springframework.cloud.openfeign.FeignAutoConfiguration
+      - org.springframework.amqp.rabbit.autoconfigure.RabbitAutoConfiguration
+
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+jwt:
+  secret: test-secret-key-for-unit-testing-must-be-at-least-256-bits-long-please-change-this-in-production
+  token-expiration: 30
+  refresh-token-expiration: 24
+
+logging:
+  level:
+    com.javaee: DEBUG

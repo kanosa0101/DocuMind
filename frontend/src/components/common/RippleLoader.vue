@@ -23,9 +23,14 @@
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  border: 2px solid var(--color-primary);
+  border: 2px solid var(--aurora-cyan);
   animation: ripple-expand 2s ease-out infinite;
   opacity: 0;
+}
+
+[data-theme="dark"] .ripple-wave {
+  border-color: var(--aurora-cyan);
+  box-shadow: 0 0 10px rgba(8, 145, 178, 0.3);
 }
 
 @keyframes ripple-expand {
@@ -45,7 +50,7 @@
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: var(--gradient-primary);
+  background: var(--gradient-aurora);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -53,12 +58,16 @@
   z-index: 10;
 }
 
+[data-theme="dark"] .ripple-center {
+  box-shadow: var(--glow-cyan);
+}
+
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 20px rgba(26, 115, 232, 0.4);
+    box-shadow: 0 0 20px rgba(8, 145, 178, 0.4), 0 0 30px rgba(16, 185, 129, 0.3);
   }
   50% {
-    box-shadow: 0 0 40px rgba(26, 115, 232, 0.8);
+    box-shadow: 0 0 40px rgba(8, 145, 178, 0.7), 0 0 50px rgba(59, 130, 246, 0.5);
   }
 }
 
@@ -66,10 +75,18 @@
   font-size: 28px;
 }
 
+[data-theme="dark"] .ai-icon {
+  filter: drop-shadow(0 0 10px rgba(8, 145, 178, 0.5));
+}
+
 .processing-text {
   margin-top: 24px;
   font-size: var(--font-size-sm);
-  color: var(--color-primary);
+  color: var(--aurora-cyan);
   animation: fade-in 0.5s ease;
+}
+
+[data-theme="dark"] .processing-text {
+  text-shadow: var(--glow-text-cyan);
 }
 </style>

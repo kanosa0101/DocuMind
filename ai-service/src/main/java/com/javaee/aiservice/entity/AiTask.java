@@ -34,4 +34,5 @@ public class AiTask {
     private LocalDateTime createTime;
 
     private LocalDateTime completeTime;
-}
+
+    }

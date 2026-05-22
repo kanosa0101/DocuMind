@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.javaee.aiservice.mapper.RecycleBinMapper">
+
+    <resultMap id="BaseResultMap" type="com.javaee.aiservice.entity.RecycleBin">
+        <id column="id" property="id"/>
+        <result column="recycle_id" property="recycleId"/>
+        <result column="file_id" property="fileId"/>
+        <result column="bucket_name" property="bucketName"/>
+        <result column="object_name" property="objectName"/>
+        <result column="original_file_name" property="originalFileName"/>
+        <result column="file_size" property="fileSize"/>
+        <result column="file_type" property="fileType"/>
+        <result column="user_id" property="userId"/>
+        <result column="delete_time" property="deleteTime"/>
+        <result column="expiry_time" property="expiryTime"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, recycle_id, file_id, bucket_name, object_name, original_file_name,
+        file_size, file_type, user_id, delete_time, expiry_time, status, create_time, update_time
+    </sql>
+
+    <!-- 根据用户ID查询回收站文件列表 -->
+    <select id="selectByUserId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM recycle_bin
+        WHERE user_id = #{userId}
+          AND status = 'DELETED'
+          AND expiry_time > NOW()
+        ORDER BY delete_time DESC
+    </select>
+
+    <!-- 查询过期的回收站文件 -->
+    <select id="selectExpired" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM recycle_bin
+        WHERE status = 'DELETED'
+          AND expiry_time &lt;= NOW()
+    </select>
+
+    <!-- 根据回收站记录ID查询 -->
+    <select id="selectByRecycleId" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM recycle_bin
+        WHERE recycle_id = #{recycleId}
+    </select>
+
+    <!-- 根据存储桶名称查询回收站文件 -->
+    <select id="selectByBucketName" resultMap="BaseResultMap">
+        SELECT <include refid="Base_Column_List"/>
+        FROM recycle_bin
+        WHERE bucket_name = #{bucketName}
+          AND status = 'DELETED'
+          AND expiry_time > NOW()
+        ORDER BY delete_time DESC
+    </select>
+
+    <!-- 更新回收站记录状态 -->
+    <update id="updateStatus">
+        UPDATE recycle_bin
+        SET status = #{status},
+            update_time = NOW()
+        WHERE recycle_id = #{recycleId}
+    </update>
+
+    <!-- 删除过期的回收站记录 -->
+    <delete id="deleteExpired">
+        DELETE FROM recycle_bin
+        WHERE status = 'DELETED'
+          AND expiry_time &lt;= NOW()
+    </delete>
+
+</mapper>

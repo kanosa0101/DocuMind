@@ -59,8 +59,8 @@ public class SecurityConfig extends BaseSecurityConfig {
             .authorizeHttpRequests(authorize -> authorize
                 // 确保Swagger相关路径的匹配规则在最前面
                 .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/v3/api-docs").permitAll()
-                // 文件接口需要认证（移除了过于宽松的 permitAll）
-                .requestMatchers("/api/files/**").authenticated()
+                // 文件接口需要认证
+                .requestMatchers("/api/files/**", "/api/v3/files/**").authenticated()
                 // 允许静态资源访问
                 .requestMatchers("/static/**", "/public/**").permitAll()
                 // 允许健康检查等端点访问

@@ -163,23 +163,8 @@ CREATE TABLE `sys_user` (
     UNIQUE KEY `uk_email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
--- 文件表
-CREATE TABLE `file_info` (
-    `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '文件ID',
-    `file_name` varchar(255) NOT NULL COMMENT '文件名',
-    `file_path` varchar(500) NOT NULL COMMENT '文件路径',
-    `file_size` bigint(20) NOT NULL COMMENT '文件大小(字节)',
-    `file_type` varchar(50) DEFAULT NULL COMMENT '文件类型',
-    `storage_type` varchar(20) DEFAULT 'local' COMMENT '存储类型 local/minio',
-    `user_id` bigint(20) NOT NULL COMMENT '上传用户ID',
-    `status` tinyint(1) DEFAULT 1 COMMENT '状态 0-删除 1-正常',
-    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
-    PRIMARY KEY (`id`),
-    KEY `idx_user_id` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文件表';
-
--- 文件元数据表 (file-service 使用)
+-- 文件元数据表 (file-service 使用，替代原 file_info 表)
+-- 原 file_info 表已废弃，使用 file_metadata 替代
 CREATE TABLE `file_metadata` (
     `id` varchar(36) NOT NULL COMMENT '主键ID',
     `file_id` varchar(36) NOT NULL COMMENT '文件唯一标识',
@@ -213,7 +198,7 @@ CREATE TABLE `doc_info` (
     `keywords` varchar(500) DEFAULT NULL COMMENT '关键词',
     `category` varchar(100) DEFAULT NULL COMMENT '分类',
     `tags` varchar(500) DEFAULT NULL COMMENT '标签',
-    `file_id` bigint(20) DEFAULT NULL COMMENT '关联文件ID',
+    `file_id` varchar(36) DEFAULT NULL COMMENT '关联文件ID（UUID）',
     `user_id` bigint(20) NOT NULL COMMENT '创建用户ID',
     `version` int(11) DEFAULT 1 COMMENT '版本号',
     `status` tinyint(1) DEFAULT 1 COMMENT '状态 0-删除 1-正常',
@@ -255,12 +240,77 @@ CREATE TABLE `ai_task` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI任务表';
 
 -- 插入默认管理员用户
--- 密码: admin123 (BCrypt加密后)
--- BCrypt加密格式：$2a$10$...
+-- 密码: test123 (BCrypt标准哈希，已验证可登录)
+-- 哈希: $2a$10$rvHLvSplN0WqyeWDHspMbup5LszFnbWOEys..8z0rcb9JZORb4o26 (60字符)
+-- 生产环境请务必修改默认密码！
 INSERT INTO `sys_user` (`username`, `password`, `email`, `nickname`, `role`, `status`)
-VALUES ('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'admin@documind.com', '系统管理员', 'admin', 1);
+VALUES ('admin', '$2a$10$rvHLvSplN0WqyeWDHspMbup5LszFnbWOEys..8z0rcb9JZORb4o26', 'admin@documind.com', '系统管理员', 'admin', 1);
 
 -- 插入默认普通用户
--- 密码: user123 (BCrypt加密后)
+-- 密码: test123 (BCrypt标准哈希，已验证可登录)
+-- 生产环境请务必修改默认密码！
 INSERT INTO `sys_user` (`username`, `password`, `email`, `nickname`, `role`, `status`)
-VALUES ('user', '$2a$10$EqKcp1WFKVQISheBxmXJWeOCB0hUJLBh2Z5yGmJWJQhZaWJQhZaW', 'user@documind.com', '普通用户', 'user', 1);
+VALUES ('user', '$2a$10$rvHLvSplN0WqyeWDHspMbup5LszFnbWOEys..8z0rcb9JZORb4o26', 'user@documind.com', '普通用户', 'user', 1);
+
+-- ========================================
+-- 回收站表 (文件软删除后存储)
+-- ========================================
+CREATE TABLE IF NOT EXISTS `recycle_bin` (
+    `id` bigint(20) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+    `recycle_id` varchar(36) NOT NULL COMMENT '回收站记录唯一标识(UUID)',
+    `file_id` varchar(36) DEFAULT NULL COMMENT '关联的文件ID',
+    `bucket_name` varchar(100) DEFAULT NULL COMMENT 'MinIO存储桶名称',
+    `object_name` varchar(255) NOT NULL COMMENT '原始对象名称',
+    `original_file_name` varchar(255) DEFAULT NULL COMMENT '原始文件名',
+    `file_size` bigint(20) DEFAULT 0 COMMENT '文件大小(字节)',
+    `file_type` varchar(50) DEFAULT NULL COMMENT '文件类型(MIME)',
+    `user_id` bigint(20) NOT NULL COMMENT '删除用户ID',
+    `delete_time` datetime NOT NULL COMMENT '删除时间',
+    `expiry_time` datetime NOT NULL COMMENT '过期时间(自动永久删除)',
+    `status` varchar(20) DEFAULT 'DELETED' COMMENT '状态 DELETED/RESTORED/PERMANENT_DELETED',
+    `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uk_recycle_id` (`recycle_id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_file_id` (`file_id`),
+    KEY `idx_expiry_time` (`expiry_time`),
+    KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='回收站表';
+
+-- ========================================
+-- 外键约束 (确保数据一致性)
+-- ========================================
+
+-- 文档表外键
+-- 注意: 添加外键前需确保数据一致，否则可能导致约束失败
+-- 如需在新环境部署，建议在数据初始化后添加
+
+-- doc_info.user_id → sys_user.id (用户删除时级联删除文档)
+ALTER TABLE `doc_info`
+ADD CONSTRAINT `fk_doc_user`
+FOREIGN KEY (`user_id`) REFERENCES `sys_user`(`id`)
+ON DELETE CASCADE;
+
+-- doc_info.file_id → file_metadata.file_id (文件删除时允许文档保留)
+ALTER TABLE `doc_info`
+ADD CONSTRAINT `fk_doc_file`
+FOREIGN KEY (`file_id`) REFERENCES `file_metadata`(`file_id`)
+ON DELETE SET NULL;
+
+-- doc_version.doc_id → doc_info.id (文档删除时级联删除版本)
+ALTER TABLE `doc_version`
+ADD CONSTRAINT `fk_version_doc`
+FOREIGN KEY (`doc_id`) REFERENCES `doc_info`(`id`)
+ON DELETE CASCADE;
+
+-- doc_version 唯一约束 (同一文档的同一版本号唯一)
+ALTER TABLE `doc_version`
+ADD UNIQUE KEY `uk_doc_version` (`doc_id`, `version`);
+
+-- 回收站外键
+-- recycle_bin.file_id → file_metadata.file_id (文件恢复时关联)
+ALTER TABLE `recycle_bin`
+ADD CONSTRAINT `fk_recycle_file`
+FOREIGN KEY (`file_id`) REFERENCES `file_metadata`(`file_id`)
+ON DELETE SET NULL;

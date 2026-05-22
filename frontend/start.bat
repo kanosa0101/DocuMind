@@ -90,11 +90,11 @@ if not exist "node_modules" (
 
 :: 检查后端服务
 echo [INFO] 检查后端服务状态...
-curl -s -o nul -w "" http://localhost:8080/api/users/login -X POST -H "Content-Type: application/json" -d "{\"username\":\"test\"}" --max-time 5 >nul 2>&1
+curl -s -o nul -w "" http://localhost:18080/api/users/login -X POST -H "Content-Type: application/json" -d "{\"username\":\"test\"}" --max-time 5 >nul 2>&1
 if %errorlevel% equ 0 (
-    echo [SUCCESS] 后端服务正常运行 (localhost:8080)
+    echo [SUCCESS] 后端服务正常运行 (localhost:18080)
 ) else (
-    echo [WARNING] 后端服务未启动，请确保后端在 localhost:8080 运行
+    echo [WARNING] 后端服务未启动，请确保后端在 localhost:18080 运行
     echo [INFO] 后端启动命令: cd .. ^&^& deploy.sh
 )
 
@@ -103,8 +103,8 @@ echo ========================================
 echo [SUCCESS] 前端开发服务器启动成功!
 echo ========================================
 echo.
-echo 访问地址: http://localhost:5173
-echo API代理: http://localhost:8080
+echo 访问地址: http://localhost:5175
+echo API代理: http://localhost:18080
 echo.
 echo 按 Ctrl+C 停止服务器
 echo.

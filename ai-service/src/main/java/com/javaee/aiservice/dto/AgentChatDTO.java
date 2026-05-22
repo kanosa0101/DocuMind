@@ -12,4 +12,5 @@ public class AgentChatDTO {
 
     @Schema(description = "用户输入内容", required = true)
     private String userInput;
-}
+
+    }

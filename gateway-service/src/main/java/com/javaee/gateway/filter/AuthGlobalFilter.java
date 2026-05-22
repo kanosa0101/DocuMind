@@ -1,10 +1,11 @@
 package com.javaee.gateway.filter;
 
+import com.javaee.common.util.RabbitMQUtil;
 import com.javaee.gateway.config.JwtConfig;
 import com.javaee.gateway.config.RabbitMQConfig;
-import com.javaee.gateway.util.RabbitMQUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -16,14 +17,21 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
  * JWT鉴权全局过滤器
- * 注意：白名单只包含必要的公开接口，避免过于宽松的权限设置
+ * 功能：
+ * 1. JWT令牌验证
+ * 2. 用户信息传递到下游服务
+ * 3. 请求签名生成（防止请求伪造）
  */
 @Slf4j
 @Component
@@ -35,12 +43,20 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     @Autowired
     private JwtConfig jwtConfig;
 
+    @Value("${gateway.signature.secret}")
+    private String gatewaySignatureSecret;
+
     // 不需要鉴权的路径（移除了过于宽松的通配符）
     private static final List<String> WHITE_LIST = List.of(
             "/api/users/login",
             "/api/users/register",
-            "/api/users/refresh"
+            "/api/users/refresh",
+            "/ws/progress"  // WebSocket端点
     );
+
+    // 签名请求头
+    private static final String HEADER_REQUEST_SIGNATURE = "X-Request-Signature";
+    private static final String HEADER_REQUEST_TIMESTAMP = "X-Request-Timestamp";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -84,10 +100,16 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             String username = jwtConfig.getUsername(token);
             String role = jwtConfig.getRole(token);
 
+            // 生成请求签名和时间戳（防止请求伪造）
+            long timestamp = System.currentTimeMillis();
+            String signature = generateRequestSignature(userId.toString(), username, timestamp);
+
             // 创建新的请求头
             ServerHttpRequest.Builder requestBuilder = request.mutate();
             requestBuilder.header("X-User-Id", userId.toString());
             requestBuilder.header("X-Username", username);
+            requestBuilder.header(HEADER_REQUEST_SIGNATURE, signature);
+            requestBuilder.header(HEADER_REQUEST_TIMESTAMP, String.valueOf(timestamp));
             if (role != null) {
                 requestBuilder.header("X-Role", role);
             }
@@ -95,11 +117,32 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             // 更新网关日志，添加用户ID
             sendGatewayLog(path, method, userId.toString());
 
+            log.info("请求签名已生成: userId={}, timestamp={}", userId, timestamp);
+
             return chain.filter(exchange.mutate().request(requestBuilder.build()).build());
         } catch (Exception e) {
             log.error("处理令牌时出错", e);
             sendGatewayAlert("TOKEN_ERROR", "处理访问令牌时出错: " + e.getMessage());
             return unauthorized(exchange);
+        }
+    }
+
+    /**
+     * 生成请求签名
+     * 签名算法: HMAC-SHA256(userId + "|" + username + "|" + timestamp + "|" + secret)
+     */
+    private String generateRequestSignature(String userId, String username, long timestamp) {
+        String data = userId + "|" + username + "|" + timestamp;
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec keySpec = new SecretKeySpec(
+                gatewaySignatureSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            mac.init(keySpec);
+            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (Exception e) {
+            log.error("签名生成失败", e);
+            throw new RuntimeException("签名生成失败: " + e.getMessage(), e);
         }
     }
 

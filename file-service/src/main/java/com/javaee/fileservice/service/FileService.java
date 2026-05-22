@@ -64,13 +64,20 @@ public interface FileService {
     void rename(String fileId, String newName, Long userId);
 
     /**
-     * 文件移动
+     * 文件移动（需验证用户权限）
+     * @param fileId 文件ID
+     * @param targetPath 目标目录
+     * @param userId 用户ID（用于权限验证）
      */
-    void move(String fileId, String targetPath);
+    void move(String fileId, String targetPath, Long userId);
 
     /**
-     * 文件复制
+     * 文件复制（需验证用户权限，新文件归属于当前用户）
+     * @param fileId 文件ID
+     * @param targetPath 目标目录
+     * @param userId 用户ID（用于权限验证和设置新文件归属）
+     * @return 新文件ID
      */
-    String copy(String fileId, String targetPath);
+    String copy(String fileId, String targetPath, Long userId);
 
 }

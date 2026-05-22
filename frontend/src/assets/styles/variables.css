@@ -1,7 +1,34 @@
 /* CSS变量定义 */
 :root {
-  /* 主色调 */
-  --color-primary: #1A73E8;
+  /* ========================================
+   * Aurora 色彩系统 (Aurora Color Palette)
+   * ======================================== */
+  --aurora-cyan: #0891B2;
+  --aurora-cyan-light: #22D3EE;
+  --aurora-emerald: #10B981;
+  --aurora-emerald-light: #34D399;
+  --aurora-blue: #3B82F6;
+  --aurora-blue-light: #60A5FA;
+  --aurora-purple: #8B5CF6;
+  --aurora-purple-light: #A78BFA;
+
+  /* Aurora 渐变 (Aurora Gradients) */
+  --gradient-aurora: linear-gradient(135deg, #0891B2, #10B981, #3B82F6);
+  --gradient-aurora-full: linear-gradient(135deg, #0891B2, #10B981, #3B82F6, #8B5CF6);
+  --gradient-aurora-radial: radial-gradient(ellipse at 50% 0%, rgba(8, 145, 178, 0.3), rgba(16, 185, 129, 0.2), rgba(59, 130, 246, 0.15));
+  --gradient-aurora-glow: linear-gradient(180deg, transparent, rgba(8, 145, 178, 0.2), rgba(59, 130, 246, 0.1));
+
+  /* ========================================
+   * Obsidian 暗色背景系统 (Obsidian Dark Backgrounds)
+   * ======================================== */
+  --obsidian-base: #0D0D0D;
+  --obsidian-surface: #1A1A1A;
+  --obsidian-elevated: #262626;
+  --obsidian-overlay: #333333;
+
+  /* ========================================
+   * 主色调 (Primary Colors - Light Mode)
+   * ======================================== */
   --color-primary-light: #4FC3F7;
   --color-primary-dark: #0D5CB8;
 
@@ -24,6 +51,50 @@
   --glass-border: rgba(255, 255, 255, 0.18);
   --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.15);
   --glass-blur: 10px;
+
+  /* ========================================
+   * 暗色玻璃拟态 (Dark Glassmorphism)
+   * ======================================== */
+  --glass-dark-bg: rgba(26, 26, 26, 0.85);
+  --glass-dark-bg-hover: rgba(38, 38, 38, 0.9);
+  --glass-dark-border: rgba(255, 255, 255, 0.08);
+  --glass-dark-border-glow: rgba(8, 145, 178, 0.2);
+  --glass-dark-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  --glass-dark-blur: 20px;
+
+  /* ========================================
+   * 发光效果 (Glow Effects)
+   * ======================================== */
+  --glow-cyan: 0 0 20px rgba(8, 145, 178, 0.6);
+  --glow-cyan-soft: 0 0 40px rgba(8, 145, 178, 0.3);
+  --glow-emerald: 0 0 20px rgba(16, 185, 129, 0.6);
+  --glow-emerald-soft: 0 0 40px rgba(16, 185, 129, 0.3);
+  --glow-blue: 0 0 20px rgba(59, 130, 246, 0.6);
+  --glow-blue-soft: 0 0 40px rgba(59, 130, 246, 0.3);
+  --glow-aurora: 0 0 30px rgba(8, 145, 178, 0.4), 0 0 60px rgba(59, 130, 246, 0.3);
+  --glow-text-cyan: 0 0 10px rgba(8, 145, 178, 0.8);
+  --glow-text-emerald: 0 0 10px rgba(16, 185, 129, 0.8);
+
+  /* ========================================
+   * 布局尺寸 (Layout Dimensions)
+   * ======================================== */
+  --sidebar-width-collapsed: 72px;
+  --sidebar-width-expanded: 240px;
+  --sidebar-width: var(--sidebar-width-collapsed);
+  --copilot-width-collapsed: 48px;
+  --copilot-width-expanded: 320px;
+  --copilot-width: var(--copilot-width-expanded);
+  --header-height: 64px;
+  --bento-gap: 16px;
+  --bento-card-min: 200px;
+
+  /* ========================================
+   * 动画时长 (Animation Durations)
+   * ======================================== */
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+  --duration-slow: 500ms;
+  --duration-aurora: 15000ms;
 
   /* 渐变 */
   --gradient-primary: linear-gradient(135deg, #1A73E8, #4FC3F7);
@@ -57,9 +128,35 @@
   --transition-fast: 0.15s ease;
   --transition-base: 0.3s ease;
   --transition-slow: 0.5s ease;
+}
 
-  /* 布局 */
-  --sidebar-width: 240px;
-  --header-height: 64px;
-  --chat-sidebar-width: 320px;
+/* ========================================
+ * 暗色模式变量覆盖 (Dark Mode Overrides)
+ * ======================================== */
+[data-theme="dark"] {
+  /* 背景 */
+  --color-bg-base: var(--obsidian-base);
+  --color-bg-secondary: var(--obsidian-surface);
+  --color-bg-dark: var(--obsidian-elevated);
+
+  /* 文字 */
+  --color-text: #F8FAFC;
+  --color-text-muted: #94A3B8;
+  --color-text-light: #64748B;
+
+  /* 玻璃拟态 - 暗色模式 */
+  --glass-bg: var(--glass-dark-bg);
+  --glass-border: var(--glass-dark-border);
+  --glass-shadow: var(--glass-dark-shadow);
+  --glass-blur: var(--glass-dark-blur);
+
+  /* 渐变 */
+  --gradient-bg: linear-gradient(180deg, var(--obsidian-base), var(--obsidian-surface));
+  --gradient-sidebar: linear-gradient(180deg, var(--obsidian-surface), var(--obsidian-elevated));
+
+  /* 阴影 */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  --shadow-glow: var(--glow-aurora);
 }

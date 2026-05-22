@@ -1,0 +1,25 @@
+server:
+  port: 8083
+
+spring:
+  ai:
+    openai:
+      api-key: test-api-key
+      base-url: https://api.deepseek.com
+      chat:
+        options:
+          model: deepseek-v4-flash
+  datasource:
+    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password:
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.client.serviceregistry.ServiceRegistryAutoConfiguration
+      - com.alibaba.cloud.nacos.NacosServiceRegistryAutoConfiguration
+      - org.springframework.cloud.openfeign.FeignAutoConfiguration
+
+logging:
+  level:
+    com.javaee: DEBUG

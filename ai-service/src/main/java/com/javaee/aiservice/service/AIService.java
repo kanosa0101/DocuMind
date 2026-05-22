@@ -134,8 +134,8 @@ public class AIService {
      * 计算单词数
      */
     private int countWords(String text) {
-        // 英文单词计数
-        String[] englishWords = text.split("[\\s\\p{Punct}&&[^，。！？；：、\"\"''（）{}[]<>《》]]+");
+        // 英文单词计数 - 使用简单的空格和标点分隔
+        String[] englishWords = text.split("[\\s\\p{Punct}]+");
         int englishWordCount = 0;
         for (String word : englishWords) {
             if (word.matches("[a-zA-Z]+") && word.length() > 0) {
@@ -180,8 +180,8 @@ public class AIService {
             promptEngineeringService.createKeywordExtractPrompt(content, count)
         );
 
-        // 解析AI返回的关键词，每行一个或逗号分隔
-        List<KeywordVO> keywords = Arrays.stream(keywordsStr.split("[,\n]"))
+        // 解析AI返回的关键词，支持中英文逗号和换行分隔
+        List<KeywordVO> keywords = Arrays.stream(keywordsStr.split("[,，\n]"))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
             .limit(count)
@@ -225,5 +225,39 @@ public class AIService {
     public TextAnalyzeVO correct(TextAnalyzeDTO dto) {
         log.info("开始文档纠错");
         return analyze(dto);
+    }
+
+    /**
+     * 生成推荐问题
+     * 基于当前问题和答案，生成用户可能感兴趣的后续问题
+     * @param question 用户问题
+     * @param answer AI回答
+     * @return 推荐问题列表（最多3个）
+     */
+    public List<String> generateRecommendedQuestions(String question, String answer) {
+        log.info("开始生成推荐问题");
+
+        String prompt = String.format(
+            "基于以下问答内容，生成3个用户可能感兴趣的后续问题。\n" +
+            "要求：\n" +
+            "1. 问题应与原话题相关，但有不同角度\n" +
+            "2. 问题简洁明了，不要过长\n" +
+            "3. 直接输出问题列表，每行一个问题，不要编号和额外说明\n\n" +
+            "问题: %s\n答案: %s",
+            question, answer
+        );
+
+        String response = chatService.callChatApi(prompt);
+
+        // 解析返回的问题列表
+        List<String> questions = Arrays.stream(response.split("\n"))
+            .map(String::trim)
+            .filter(s -> !s.isEmpty())
+            .filter(s -> s.length() > 5 && s.length() < 100) // 过滤过短或过长的行
+            .limit(3)
+            .collect(Collectors.toList());
+
+        log.info("推荐问题生成完成，共{}个问题", questions.size());
+        return questions;
     }
 }

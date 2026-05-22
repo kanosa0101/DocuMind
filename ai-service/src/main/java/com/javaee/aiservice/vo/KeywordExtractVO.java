@@ -12,4 +12,5 @@ import java.util.List;
 public class KeywordExtractVO {
     private List<KeywordVO> keywords;
     private Integer totalCount;
-}
+
+    }

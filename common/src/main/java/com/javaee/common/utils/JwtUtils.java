@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
@@ -25,14 +26,29 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
-    @Value("${jwt.secret:your-secret-key-for-jwt-token-generation-and-validation-please-change-this-in-production}")
+    @Value("${jwt.secret}")
     private String secretKey;
 
     @Value("${jwt.token-expiration:30}")
     private long tokenExpirationMinutes;
 
-    @Value("${jwt.refresh-token-expiration:168}")
+    @Value("${jwt.refresh-token-expiration:24}")
     private long refreshTokenExpirationHours;
+
+    /**
+     * 启动时验证密钥强度
+     */
+    @PostConstruct
+    public void validateSecretKey() {
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException("JWT密钥长度不足32字节，请配置更强的密钥（建议64字符以上）");
+        }
+        if (secretKey.contains("DocuMind-2024") || secretKey.contains("Please-Change-This")) {
+            throw new IllegalStateException("请勿使用默认JWT密钥模式，必须配置生产环境专用密钥");
+        }
+        log.info("JWT密钥验证通过，长度: {}字节", keyBytes.length);
+    }
 
     /**
      * 获取签名密钥

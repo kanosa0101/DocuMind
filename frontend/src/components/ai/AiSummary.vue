@@ -1,7 +1,7 @@
 <template>
   <div class="ai-summary">
     <div class="summary-header">
-      <span class="success-icon">✅</span>
+      <CheckCircle class="success-icon" :size="24" />
       <span class="summary-label">AI 摘要</span>
       <span class="compression-badge">{{ ratio }}% 压缩</span>
     </div>
@@ -13,6 +13,8 @@
 </template>
 
 <script setup lang="ts">
+import { CheckCircle } from '@lucide/vue'
+
 defineProps<{
   summary: string
   ratio: number
@@ -33,7 +35,11 @@ defineProps<{
 }
 
 .success-icon {
-  font-size: 24px;
+  color: var(--aurora-emerald);
+}
+
+[data-theme="dark"] .success-icon {
+  color: var(--aurora-emerald-light);
 }
 
 .summary-label {
@@ -44,15 +50,26 @@ defineProps<{
 .compression-badge {
   padding: 4px 12px;
   border-radius: var(--radius-full);
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--color-success);
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--aurora-emerald);
   font-size: var(--font-size-xs);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .compression-badge {
+  background: rgba(16, 185, 129, 0.25);
+  text-shadow: var(--glow-text-emerald);
 }
 
 .summary-content {
   padding: 16px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="dark"] .summary-content {
+  background: rgba(26, 26, 26, 0.4);
+  border: 1px solid var(--glass-dark-border);
 }
 
 .summary-content p {

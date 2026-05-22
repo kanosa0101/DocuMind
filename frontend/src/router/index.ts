@@ -39,12 +39,7 @@ const routes = [
         component: () => import('@/pages/ai/index.vue'),
         meta: { title: 'AI实验室' }
       },
-      {
-        path: 'documents',
-        name: 'Documents',
-        component: () => import('@/pages/documents/index.vue'),
-        meta: { title: '文档版本' }
-      },
+      // v3.0：documents路由已删除，文件中心统一管理
       {
         path: 'settings',
         name: 'Settings',

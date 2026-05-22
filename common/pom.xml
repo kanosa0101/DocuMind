@@ -48,6 +48,12 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- RabbitMQ（消息队列工具类） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
+
         <!-- 工具类依赖 -->
         <dependency>
             <groupId>cn.hutool</groupId>

@@ -6,4 +6,5 @@ import lombok.Data;
 public class TextSummarizeDTO {
     private String content;
     private Integer maxLength;
-}
+
+    }

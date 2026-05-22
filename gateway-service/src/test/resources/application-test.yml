@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: user-service
+          uri: lb://user-service
+          predicates:
+            - Path=/api/users/**
+        - id: file-service
+          uri: lb://file-service
+          predicates:
+            - Path=/api/files/**
+        - id: ai-service
+          uri: lb://ai-service
+          predicates:
+            - Path=/api/ai/**
+  autoconfigure:
+    exclude:
+      - org.springframework.cloud.client.serviceregistry.ServiceRegistryAutoConfiguration
+      - com.alibaba.cloud.nacos.NacosServiceRegistryAutoConfiguration
+
+jwt:
+  secret: test-secret-key-for-jwt-token-generation-and-validation-please-change-this-in-production-environment-at-least-256-bits
+
+gateway:
+  signature:
+    secret: test-gateway-signature-secret-key
+
+logging:
+  level:
+    com.javaee: DEBUG

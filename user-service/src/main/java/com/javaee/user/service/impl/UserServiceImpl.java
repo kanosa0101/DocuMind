@@ -27,14 +27,16 @@ import java.time.LocalDateTime;
 @Service
 public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements UserService {
 
-    @Autowired
-    private UserMapper userMapper;
+    private final UserMapper userMapper;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final JwtUtils jwtUtils;
 
     @Autowired
-    private BCryptPasswordEncoder passwordEncoder;
-
-    @Autowired
-    private JwtUtils jwtUtils;
+    public UserServiceImpl(UserMapper userMapper, BCryptPasswordEncoder passwordEncoder, JwtUtils jwtUtils) {
+        this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtils = jwtUtils;
+    }
 
     @Override
     public LoginVO login(LoginDTO loginDTO) {

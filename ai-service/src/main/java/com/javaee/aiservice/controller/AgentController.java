@@ -10,14 +10,20 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Agent控制器
  * 提供AI Agent相关的REST API接口
+ * 支持同步和流式输出
  */
 @Slf4j
 @RestController
@@ -35,21 +41,24 @@ public class AgentController {
     private PlanExecuteAgent planExecuteAgent;
 
     /**
-     * 对话Agent - 开始对话
+     * 对话Agent - 开始对话（需认证）
      */
     @PostMapping("/chat/start")
-    @Operation(summary = "开始对话", description = "创建新的对话会话")
+    @Operation(summary = "开始对话", description = "创建新的对话会话，需用户认证")
     public Result<String> startConversation(
-            @Parameter(description = "用户ID") @RequestParam(required = false, defaultValue = "default") String userId) {
-        String conversationId = chatReactAgent.startConversation(userId);
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
+        if (userIdHeader == null || userIdHeader.isEmpty()) {
+            return Result.fail("用户身份验证失败：缺少用户ID");
+        }
+        String conversationId = chatReactAgent.startConversation(userIdHeader);
         return Result.success(conversationId);
     }
 
     /**
-     * 对话Agent - 发送消息
+     * 对话Agent - 发送消息（同步）
      */
     @PostMapping("/chat")
-    @Operation(summary = "发送消息", description = "向对话Agent发送消息")
+    @Operation(summary = "发送消息", description = "向对话Agent发送消息，同步返回结果")
     public Result<Map<String, Object>> chat(
             @Parameter(description = "对话ID") @RequestParam String conversationId,
             @RequestBody AgentChatDTO dto) {
@@ -64,6 +73,85 @@ public class AgentController {
             log.error("对话处理失败: {}", e.getMessage(), e);
             return Result.fail("对话处理失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 对话Agent - 发送消息（流式）
+     * SSE流式输出，实时返回AI回复
+     */
+    @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "发送消息(流式)", description = "向对话Agent发送消息，流式返回结果")
+    public SseEmitter streamChat(
+            @Parameter(description = "对话ID") @RequestParam String conversationId,
+            @Parameter(description = "用户输入") @RequestParam String userInput,
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
+
+        if (userInput == null || userInput.trim().isEmpty()) {
+            SseEmitter emitter = new SseEmitter();
+            try {
+                emitter.send("[ERROR] 用户输入内容不能为空");
+                emitter.complete();
+            } catch (IOException e) {
+                emitter.completeWithError(e);
+            }
+            return emitter;
+        }
+
+        log.info("流式对话请求: conversationId={}, userInput={}, userId={}", conversationId, userInput, userIdHeader);
+
+        SseEmitter emitter = new SseEmitter(60000L); // 60秒超时
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+
+        executor.execute(() -> {
+            try {
+                chatReactAgent.streamChat(
+                    conversationId, userInput, Map.of(),
+                    chunk -> {
+                        try {
+                            emitter.send(chunk);
+                        } catch (IOException e) {
+                            log.error("发送SSE chunk失败", e);
+                        }
+                    },
+                    () -> {
+                        try {
+                            emitter.complete();
+                        } catch (Exception e) {
+                            log.error("完成SSE失败", e);
+                        }
+                    },
+                    error -> {
+                        try {
+                            emitter.send("[ERROR] " + error);
+                            emitter.complete();
+                        } catch (IOException e) {
+                            emitter.completeWithError(e);
+                        }
+                    }
+                );
+
+            } catch (Exception e) {
+                log.error("流式对话处理失败", e);
+                try {
+                    emitter.send("[ERROR] " + e.getMessage());
+                    emitter.completeWithError(e);
+                } catch (IOException ioException) {
+                    emitter.completeWithError(ioException);
+                }
+            }
+        });
+
+        emitter.onCompletion(() -> executor.shutdown());
+        emitter.onTimeout(() -> {
+            log.warn("SSE超时");
+            executor.shutdown();
+        });
+        emitter.onError(e -> {
+            log.error("SSE错误", e);
+            executor.shutdown();
+        });
+
+        return emitter;
     }
 
     /**
@@ -89,14 +177,18 @@ public class AgentController {
     }
 
     /**
-     * 知识索引Agent - 索引文档
+     * 知识索引Agent - 索引文档（需认证）
      */
     @PostMapping("/knowledge/index")
-    @Operation(summary = "索引文档", description = "将文档添加到知识库索引")
+    @Operation(summary = "索引文档", description = "将文档添加到知识库索引，需用户认证")
     public Result<Map<String, Object>> indexDocument(
             @Parameter(description = "文档ID") @RequestParam String documentId,
-            @Parameter(description = "文档内容") @RequestBody String content) {
-        Map<String, Object> result = knowledgeIndexAgent.indexDocument(documentId, content, Map.of());
+            @RequestBody String content,
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
+        if (userIdHeader == null || userIdHeader.isEmpty()) {
+            return Result.fail("用户身份验证失败：缺少用户ID");
+        }
+        Map<String, Object> result = knowledgeIndexAgent.indexDocument(documentId, content, Map.of("userId", userIdHeader));
         return Result.success(result);
     }
 
@@ -113,12 +205,16 @@ public class AgentController {
     }
 
     /**
-     * 知识索引Agent - 删除索引
+     * 知识索引Agent - 删除索引（需认证）
      */
     @DeleteMapping("/knowledge/index/{documentId}")
-    @Operation(summary = "删除索引", description = "删除文档索引")
+    @Operation(summary = "删除索引", description = "删除文档索引，需用户认证")
     public Result<Map<String, Object>> deleteIndex(
-            @Parameter(description = "文档ID") @PathVariable String documentId) {
+            @Parameter(description = "文档ID") @PathVariable String documentId,
+            @RequestHeader(value = "X-User-Id", required = false) String userIdHeader) {
+        if (userIdHeader == null || userIdHeader.isEmpty()) {
+            return Result.fail("用户身份验证失败：缺少用户ID");
+        }
         Map<String, Object> result = knowledgeIndexAgent.deleteIndex(documentId);
         return Result.success(result);
     }

@@ -8,3 +8,5 @@ export default pinia
 
 // 导出所有store
 export * from './auth'
+export * from './theme'
+export * from './layout'

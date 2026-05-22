@@ -1,5 +1,10 @@
 server:
-  port: 8083
+  port: 18083
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 spring:
   application:
@@ -8,7 +13,7 @@ spring:
     allow-bean-definition-overriding: true
 
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:doc_ai}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:doc_ai}?useUnicode=true&characterEncoding=utf-8&useSSL=${MYSQL_USE_SSL:true}&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:admin123}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -43,7 +48,7 @@ spring:
   ai:
     openai:
       api-key: ${OPENAI_API_KEY}
-      base-url: ${OPENAI_API_BASE:https://api.deepseek.com/v1}
+      base-url: ${OPENAI_API_BASE:https://api.deepseek.com}
       chat:
         options:
           model: ${OPENAI_MODEL:deepseek-v4-flash}
@@ -54,8 +59,8 @@ spring:
     dashscope:
       api-key: ${DASHSCOPE_API_KEY:}
       embedding:
-        model: ${DASHSCOPE_EMBEDDING_MODEL:text-embedding-v3}
-        dimension: 1024
+        model: ${DASHSCOPE_EMBEDDING_MODEL:tongyi-embedding-vision-flash-2026-03-06}
+        dimension: 768
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
@@ -89,12 +94,30 @@ minio:
   delete:
     confirmation-timeout: 300
 
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:?JWT密钥未配置}
+
+# 网关签名验证配置
+gateway:
+  signature:
+    secret: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
+
 # 日志配置
 logging:
   level:
     com.javaee.aiservice: ${LOG_LEVEL_APP:info}
     org.springframework.ai: info
     org.springframework.security: warn
+
+# MyBatis Plus配置
+mybatis-plus:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+  global-config:
+    db-config:
+      id-type: auto
 
 # SpringDoc配置
 springdoc:

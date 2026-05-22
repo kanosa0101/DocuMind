@@ -20,9 +20,14 @@ body {
   background: var(--gradient-bg);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  transition: background-color var(--transition-base), color var(--transition-base);
 }
 
-/* 玻璃拟态卡片 */
+/* ========================================
+ * 玻璃拟态卡片 (Glassmorphism Cards)
+ * ======================================== */
+
+/* 亮色模式玻璃卡片 */
 .glass-card {
   background: var(--glass-bg);
   backdrop-filter: blur(var(--glass-blur));
@@ -38,23 +43,81 @@ body {
   box-shadow: var(--shadow-lg);
 }
 
-/* 状态样式 */
-.status-success {
-  color: var(--color-success);
-  background: rgba(16, 185, 129, 0.1);
+/* 暗色模式玻璃卡片 */
+[data-theme="dark"] .glass-card {
+  background: var(--glass-dark-bg);
+  backdrop-filter: blur(var(--glass-dark-blur));
+  -webkit-backdrop-filter: blur(var(--glass-dark-blur));
+  border: 1px solid var(--glass-dark-border);
+  box-shadow: var(--glass-dark-shadow);
 }
 
-.status-processing {
-  color: var(--color-primary);
-  background: rgba(26, 115, 232, 0.1);
+[data-theme="dark"] .glass-card:hover {
+  background: var(--glass-dark-bg-hover);
+  box-shadow: var(--shadow-lg), var(--glow-cyan-soft);
 }
 
-.status-error {
-  color: var(--color-error);
-  background: rgba(239, 68, 68, 0.1);
+/* ========================================
+ * 玻璃层级系统 (Glass Layer System)
+ * ======================================== */
+
+.glass-layer-1 {
+  background: rgba(26, 26, 26, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* 波纹扫描动画 */
+.glass-layer-2 {
+  background: rgba(38, 38, 38, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-layer-3 {
+  background: rgba(51, 51, 51, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================
+ * Aurora 动画 (Aurora Animations)
+ * ======================================== */
+
+@keyframes aurora-shift {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translateY(-20px) scale(1.1);
+  }
+}
+
+@keyframes aurora-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes aurora-pulse {
+  0%, 100% {
+    filter: blur(80px);
+    opacity: 0.3;
+  }
+  50% {
+    filter: blur(100px);
+    opacity: 0.5;
+  }
+}
+
+/* ========================================
+ * 波纹扫描动画 (Ripple Animations)
+ * ======================================== */
+
 @keyframes ripple-expand {
   0% {
     transform: scale(0.5);
@@ -66,14 +129,40 @@ body {
   }
 }
 
-@keyframes pulse-glow {
-  0%, 100% {
-    box-shadow: 0 0 20px rgba(26, 115, 232, 0.4);
+@keyframes ripple-aurora {
+  0% {
+    transform: scale(0);
+    opacity: 0.8;
+    background: radial-gradient(circle, rgba(8, 145, 178, 0.6), rgba(16, 185, 129, 0.4), transparent);
   }
-  50% {
-    box-shadow: 0 0 40px rgba(26, 115, 232, 0.8);
+  100% {
+    transform: scale(4);
+    opacity: 0;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.2), transparent);
   }
 }
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(8, 145, 178, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(8, 145, 178, 0.8);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: var(--glow-cyan-soft);
+  }
+  50% {
+    box-shadow: var(--glow-cyan);
+  }
+}
+
+/* ========================================
+ * 渐入动画 (Fade Animations)
+ * ======================================== */
 
 @keyframes fade-in {
   from {
@@ -86,7 +175,88 @@ body {
   }
 }
 
-/* 滚动条 */
+@keyframes fade-in-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes stagger-fade {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ========================================
+ * 发光文字效果 (Glowing Text)
+ * ======================================== */
+
+.glow-text-cyan {
+  color: var(--aurora-cyan);
+  text-shadow: var(--glow-text-cyan);
+}
+
+.glow-text-emerald {
+  color: var(--aurora-emerald);
+  text-shadow: var(--glow-text-emerald);
+}
+
+.glow-text-aurora {
+  background: var(--gradient-aurora);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ========================================
+ * Aurora 按钮效果 (Aurora Button Effects)
+ * ======================================== */
+
+.aurora-glow-hover {
+  transition: box-shadow var(--transition-base);
+}
+
+.aurora-glow-hover:hover {
+  box-shadow: var(--glow-aurora);
+}
+
+.btn-bounce:active {
+  transform: scale(0.95);
+}
+
+/* ========================================
+ * 状态样式 (Status Styles)
+ * ======================================== */
+
+.status-success {
+  color: var(--color-success);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.status-processing {
+  color: var(--aurora-cyan);
+  background: rgba(8, 145, 178, 0.1);
+}
+
+.status-error {
+  color: var(--color-error);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* ========================================
+ * 滚动条 (Scrollbar)
+ * ======================================== */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -97,18 +267,60 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-primary-light);
+  background: rgba(8, 145, 178, 0.3);
   border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary);
+  background: var(--aurora-cyan);
 }
 
-/* Element Plus 样式覆盖 */
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: var(--aurora-cyan);
+}
+
+/* ========================================
+ * 暗色模式全局样式 (Dark Mode Global Styles)
+ * ======================================== */
+
+[data-theme="dark"] body {
+  background: var(--obsidian-base);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] textarea {
+  background: rgba(26, 26, 26, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+}
+
+[data-theme="dark"] input:focus,
+[data-theme="dark"] textarea:focus {
+  border-color: var(--aurora-cyan);
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.2);
+}
+
+[data-theme="dark"] select {
+  background: rgba(26, 26, 26, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--color-text);
+}
+
+/* ========================================
+ * Element Plus 样式覆盖 (Element Plus Overrides)
+ * ======================================== */
+
 .el-button--primary {
   background: var(--gradient-primary);
   border: none;
+}
+
+[data-theme="dark"] .el-button--primary {
+  background: var(--gradient-aurora);
 }
 
 .el-input__wrapper {
@@ -117,10 +329,43 @@ body {
   border-radius: var(--radius-md);
 }
 
-/* 响应式 */
+[data-theme="dark"] .el-input__wrapper {
+  background: rgba(26, 26, 26, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================
+ * 响应式 (Responsive)
+ * ======================================== */
+
 @media (max-width: 768px) {
   :root {
     --sidebar-width: 60px;
-    --chat-sidebar-width: 280px;
+    --copilot-width: 0px;
   }
+
+  .copilot-panel {
+    display: none;
+  }
+}
+
+/* ========================================
+ * 动画类 (Animation Classes)
+ * ======================================== */
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease forwards;
+}
+
+.animate-stagger-fade {
+  animation: stagger-fade 0.4s ease forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-aurora-flow {
+  animation: aurora-flow 15s ease-in-out infinite;
+  background-size: 200% 200%;
 }

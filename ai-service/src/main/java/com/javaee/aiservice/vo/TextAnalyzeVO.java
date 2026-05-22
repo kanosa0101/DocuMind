@@ -17,4 +17,5 @@ public class TextAnalyzeVO {
     private Integer lines;
     private Integer words;
     private Integer sentences;
-}
+
+    }

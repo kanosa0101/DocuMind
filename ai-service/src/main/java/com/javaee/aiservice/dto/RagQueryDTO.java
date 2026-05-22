@@ -15,4 +15,5 @@ public class RagQueryDTO {
 
     @Schema(description = "重排序策略: BM25_FUSION, CROSS_ENCODER, HYBRID", defaultValue = "HYBRID")
     private String strategy;
-}
+
+    }

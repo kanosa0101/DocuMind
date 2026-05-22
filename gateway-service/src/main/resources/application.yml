@@ -8,6 +8,13 @@ spring:
   cloud:
     compatibility-verifier:
       enabled: false
+    loadbalancer:
+      ribbon:
+        enabled: false
+      cache:
+        enabled: true
+      health-check:
+        initial-delay: 0
     gateway:
       health:
         enabled: true
@@ -31,14 +38,14 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:redis123}
+      password: ${REDIS_PASSWORD:?Redis密码未配置}
       database: 0
 
   rabbitmq:
     host: ${RABBITMQ_HOST:localhost}
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:admin}
-    password: ${RABBITMQ_PASSWORD:rabbit123}
+    password: ${RABBITMQ_PASSWORD:?RabbitMQ密码未配置}
     virtual-host: /
     listener:
       simple:
@@ -49,7 +56,7 @@ spring:
         default-requeue-rejected: true
 
 server:
-  port: 8080
+  port: 18080
 
 logging:
   level:
@@ -58,9 +65,9 @@ logging:
 
 # JWT配置
 jwt:
-  secret: ${JWT_SECRET:your-default-secret-key-please-change-in-production}
+  secret: ${JWT_SECRET:?JWT密钥未配置}
   token-expiration: ${JWT_TOKEN_EXPIRATION:30}
-  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:168}
+  refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:24}
 
 # 网关路由配置 - 使用 Nacos 服务发现
 gateway:
@@ -69,10 +76,12 @@ gateway:
     file-uri: lb://file
     ai-uri: lb://ai-service
     document-uri: lb://document
+  signature:
+    secret: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
 
 # CORS跨域配置
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5175,http://localhost:3000}
 
 custom:
   jwt:

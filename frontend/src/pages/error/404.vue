@@ -1,11 +1,15 @@
 <template>
   <div class="error-page">
-    <span class="error-icon">🔍</span>
+    <SearchX class="error-icon" :size="80" />
     <h1>404</h1>
     <p>页面未找到</p>
     <router-link to="/dashboard" class="back-btn">返回首页</router-link>
   </div>
 </template>
+
+<script setup lang="ts">
+import { SearchX } from '@lucide/vue'
+</script>
 
 <style scoped>
 .error-page {

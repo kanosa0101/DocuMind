@@ -10,20 +10,24 @@ services:
         condition: on-failure
     environment:
       SPRING_APPLICATION_NAME: user
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos-infra:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-infra:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: admin123
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MySQL密码未设置}
+      SPRING_REDIS_HOST: redis-infra-infra
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
+      SPRING_RABBITMQ_HOST: rabbitmq-infra
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
+      JWT_SECRET: ${JWT_SECRET:?JWT密钥未设置}
+      JWT_TOKEN_EXPIRATION: ${JWT_TOKEN_EXPIRATION:-30}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION:-24}
+      GATEWAY_SIGNATURE_SECRET: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
     networks:
-      - docai-network
+      - documind_docai-network
     ports:
-      - target: 8081
-        published: 28081
+      - target: 18081
+        published: 18081
         mode: host
 
   gateway:
@@ -35,17 +39,21 @@ services:
         condition: on-failure
     environment:
       SPRING_APPLICATION_NAME: gateway
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos-infra:8848
+      SPRING_REDIS_HOST: redis-infra
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
+      SPRING_RABBITMQ_HOST: rabbitmq-infra
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
+      JWT_SECRET: ${JWT_SECRET:?JWT密钥未设置}
+      JWT_TOKEN_EXPIRATION: ${JWT_TOKEN_EXPIRATION:-30}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION:-24}
+      GATEWAY_SIGNATURE_SECRET: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
     networks:
-      - docai-network
+      - documind_docai-network
     ports:
-      - target: 8080
-        published: 28080
+      - target: 18080
+        published: 18080
         mode: host
 
   # 文件服务
@@ -58,23 +66,26 @@ services:
         condition: on-failure
     environment:
       SPRING_APPLICATION_NAME: file
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos-infra:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-infra:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: admin123
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: admin
-      MINIO_SECRET_KEY: minio123
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MySQL密码未设置}
+      SPRING_REDIS_HOST: redis-infra-infra
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
+      SPRING_RABBITMQ_HOST: rabbitmq-infra
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
+      MINIO_ENDPOINT: http://minio-infra:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MinIO密码未设置}
+      MINIO_BUCKET: ${MINIO_BUCKET:-docai-files}
+      JWT_SECRET: ${JWT_SECRET:?JWT密钥未设置}
+      GATEWAY_SIGNATURE_SECRET: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
     networks:
-      - docai-network
+      - documind_docai-network
     ports:
-      - target: 8082
-        published: 28082
+      - target: 18082
+        published: 18082
         mode: host
 
   # AI 服务
@@ -86,52 +97,34 @@ services:
       restart_policy:
         condition: on-failure
     environment:
-      SPRING_APPLICATION_NAME: ai
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: admin
-      MINIO_SECRET_KEY: minio123
+      SPRING_APPLICATION_NAME: ai-service
+      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos-infra:8848
+      # Redis配置（使用application.yml中的变量名）
+      REDIS_HOST: redis-infra
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
+      SPRING_RABBITMQ_HOST: rabbitmq-infra
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
+      MINIO_ENDPOINT: http://minio-infra:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MinIO密码未设置}
+      MINIO_BUCKET: ${MINIO_BUCKET:-docai-files}
+      # AI服务配置
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?DeepSeek API密钥未设置}
+      OPENAI_API_BASE: ${OPENAI_API_BASE:-https://api.deepseek.com}
+      OPENAI_MODEL: ${OPENAI_MODEL:-deepseek-v4-flash}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      DASHSCOPE_EMBEDDING_MODEL: ${DASHSCOPE_EMBEDDING_MODEL:-text-embedding-v3}
+      JWT_SECRET: ${JWT_SECRET:?JWT密钥未设置}
+      GATEWAY_SIGNATURE_SECRET: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
     networks:
-      - docai-network
+      - documind_docai-network
     ports:
-      - target: 8083
-        published: 28083
-        mode: host
-
-  # 文档服务
-  document:
-    image: docai/document-service:1.0.0
-    deploy:
-      mode: replicated
-      replicas: 1
-      restart_policy:
-        condition: on-failure
-    environment:
-      SPRING_APPLICATION_NAME: document
-      SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: admin123
-      SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
-      SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
-      MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: admin
-      MINIO_SECRET_KEY: minio123
-    networks:
-      - docai-network
-    ports:
-      - target: 8084
-        published: 28084
+      - target: 18083
+        published: 18083
         mode: host
 
 networks:
-  docai-network:
-    driver: bridge
+  documind_docai-network:
+    external: true

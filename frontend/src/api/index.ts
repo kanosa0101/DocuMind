@@ -1,20 +1,33 @@
 // Axios实例配置与拦截器
 
-import axios from 'axios'
+import axios, { type AxiosRequestConfig } from 'axios'
 import router from '@/router'
 import { tokenManager } from '@/utils/token'
+import { useToast } from '@/composables/useToast'
 import type { Result } from '@/types/api'
+
+const toast = useToast()
 
 // API基础URL - 使用相对路径走Vite代理，避免浏览器代理干扰
 const baseURL = import.meta.env.VITE_API_BASE_URL || ''
 
+// 自定义API实例类型，因为响应拦截器直接返回data而非AxiosResponse
+interface ApiInstance {
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>
+}
+
 // 创建Axios实例
-const api = axios.create({
+const axiosInstance = axios.create({
   baseURL,
   timeout: 30000,
   headers: {
-    'Content-Type': 'application/json'
-  }
+    'Content-Type': 'application/json; charset=UTF-8'
+  },
+  // 禁用HTTP代理，避免系统http_proxy环境变量干扰本地请求
+  proxy: false
 })
 
 // 白名单路径（无需认证）
@@ -39,7 +52,7 @@ function onTokenRefreshed(token: string) {
 }
 
 // 请求拦截器
-api.interceptors.request.use(
+axiosInstance.interceptors.request.use(
   async (config) => {
     // 白名单路径跳过认证（精确匹配）
     const url = config.url || ''
@@ -87,11 +100,12 @@ api.interceptors.request.use(
         } catch (error) {
           // 刷新失败，清除token并跳转登录页
           console.warn('Token刷新失败，清除认证信息')
+          toast.warning('登录状态已过期，请重新登录')
           tokenManager.clearTokens()
           onTokenRefreshed('') // 通知等待的请求（token为空表示失败）
           // 跳转登录页
           const currentPath = window.location.pathname
-          router.push({ path: '/login', query: { redirect: currentPath !== '/login' ? currentPath : '/dashboard' } })
+          router.push({ path: '/login', query: { redirect: currentPath !== '/login' ? currentPath : '/dashboard', reason: 'session_expired' } })
           return Promise.reject(error)
         } finally {
           isRefreshing = false
@@ -112,7 +126,7 @@ api.interceptors.request.use(
 )
 
 // 响应拦截器
-api.interceptors.response.use(
+axiosInstance.interceptors.response.use(
   (response) => {
     // 统一处理Result响应
     const result = response.data as Result<any>
@@ -127,9 +141,18 @@ api.interceptors.response.use(
   },
   (error) => {
     // HTTP错误处理
-    if (error.response?.status === 401) {
+    const status = error.response?.status
+    let message = '操作失败'
+
+    if (!error.response) {
+      message = '网络连接失败，请检查网络'
+      toast.error(message)
+    } else if (status === 401) {
       // 清除token
       tokenManager.clearTokens()
+
+      message = '登录已过期，请重新登录'
+      toast.warning(message)
 
       // 防止多次跳转（使用防抖标记）
       if (!hasRedirectedToLogin) {
@@ -140,16 +163,40 @@ api.interceptors.response.use(
 
         // 跳转登录页，携带redirect参数
         if (currentPath !== '/login') {
-          router.push({ path: '/login', query: { redirect: redirectPath } })
+          router.push({ path: '/login', query: { redirect: redirectPath, reason: 'session_expired' } })
         }
         // 延迟重置标记，防止在跳转过程中重复触发
         setTimeout(() => {
           hasRedirectedToLogin = false
         }, 1000)
       }
+    } else if (status === 403) {
+      message = '无权限访问此资源'
+      toast.error(message)
+    } else if (status === 404) {
+      message = '请求的资源不存在'
+      toast.warning(message)
+    } else if (status === 500) {
+      message = '服务器内部错误，请稍后重试'
+      toast.error(message)
+    } else if (status === 502 || status === 503) {
+      message = '服务暂时不可用，请稍后重试'
+      toast.error(message)
+    } else {
+      message = error.response?.data?.message || `请求失败（${status}）`
+      toast.error(message)
     }
-    return Promise.reject(error)
+
+    return Promise.reject({ status, message, error })
   }
 )
+
+// 创建符合自定义类型的API实例
+const api: ApiInstance = {
+  get: (url, config) => axiosInstance.get(url, config) as Promise<any>,
+  post: (url, data, config) => axiosInstance.post(url, data, config) as Promise<any>,
+  put: (url, data, config) => axiosInstance.put(url, data, config) as Promise<any>,
+  delete: (url, config) => axiosInstance.delete(url, config) as Promise<any>
+}
 
 export default api

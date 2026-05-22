@@ -10,7 +10,7 @@ services:
       restart_policy:
         condition: on-failure
     environment:
-      MYSQL_ROOT_PASSWORD: admin123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MySQL密码未设置}
       MYSQL_DATABASE: doc_ai
     volumes:
       - mysql-data:/var/lib/mysql
@@ -20,7 +20,7 @@ services:
     ports:
       - "23306:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-padmin123"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:?MySQL密码未设置}"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -35,7 +35,7 @@ services:
       replicas: 1
       restart_policy:
         condition: on-failure
-    command: redis-server --requirepass redis123 --appendonly yes
+    command: redis-server --requirepass ${REDIS_PASSWORD:?Redis密码未设置} --appendonly yes
     volumes:
       - redis-data:/data
     networks:
@@ -43,7 +43,7 @@ services:
     ports:
       - "28379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "redis123", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?Redis密码未设置}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,7 +58,7 @@ services:
         condition: on-failure
     environment:
       RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: rabbit123
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
     networks:
       - docai-network
     ports:
@@ -80,8 +80,8 @@ services:
       restart_policy:
         condition: on-failure
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: minio123
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?MinIO密码未设置}
     command: server /data --console-address ":9001"
     volumes:
       - minio-data:/data
@@ -113,8 +113,8 @@ services:
       MYSQL_SERVICE_PORT: 3306
       MYSQL_SERVICE_DB_NAME: nacos_config
       MYSQL_SERVICE_USER: root
-      MYSQL_SERVICE_PASSWORD: admin123
-      MYSQL_SERVICE_DB_PARAM: characterEncoding=utf8&connectTimeout=30000&socketTimeout=30000&autoReconnect=true&useSSL=false&allowPublicKeyRetrieval=true
+      MYSQL_SERVICE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MySQL密码未设置}
+      MYSQL_SERVICE_DB_PARAM: characterEncoding=utf8&connectTimeout=30000&socketTimeout=30000&autoReconnect=true&useSSL=true
     ports:
       - "28848:8848"
       - "29848:9848"

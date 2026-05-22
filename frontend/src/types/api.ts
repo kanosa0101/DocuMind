@@ -59,6 +59,17 @@ export interface FileMetadata {
   updateTime: string
 }
 
+// 回收站文件
+export interface RecycleFile {
+  recycleId: string
+  bucketName: string
+  originalObjectName: string
+  deleteTime: number
+  expiryTime: number
+  fileSize: number
+  deleter: string
+}
+
 // 文档信息
 export interface DocumentVO {
   id: string
@@ -73,6 +84,7 @@ export interface DocumentVO {
   status: string
   userId?: string
   createdBy?: string
+  processStatus?: string  // v2.0新增：AI处理状态
   createTime: string
   updateTime: string
 }
@@ -86,6 +98,10 @@ export interface DocumentVersion {
   changeLog?: string
   createdBy?: string
   createTime: string
+  // v2.0新增字段
+  fileId?: string      // 该版本关联的文件ID（跳转文件中心）
+  summary?: string     // 该版本的AI摘要（历史保留）
+  keywords?: string[]  // 该版本的AI关键词（历史保留）
 }
 
 // AI摘要响应
@@ -154,4 +170,67 @@ export interface StorageInfo {
   used: number
   total: number
   percentage: number
+}
+
+// 搜索结果
+export interface SearchResult {
+  id: string
+  content: string
+  score: number
+  source?: string
+}
+
+// 知识索引结果
+export interface KnowledgeIndexResult {
+  documentId: string
+  indexed: boolean
+  message?: string
+}
+
+// 知识搜索结果
+export interface KnowledgeSearchResult {
+  id: string
+  content: string
+  score: number
+  metadata?: Record<string, any>
+}
+
+// 计划执行结果
+export interface PlanExecuteResult {
+  task: string
+  result: string
+  steps?: string[]
+  success: boolean
+}
+
+// AIOps监控指标
+export interface AIOpsMetrics {
+  counters: Record<string, number>
+  timers: Record<string, { count: number; sum: number; avg: number }>
+  gauges: Record<string, number>
+}
+
+// 健康检查结果
+export interface HealthCheckResult {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  services: Record<string, { status: string; latency?: number }>
+  timestamp: number
+}
+
+// 故障信息
+export interface FaultInfo {
+  id: string
+  type: string
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  description: string
+  timestamp: number
+  resolved: boolean
+}
+
+// 故障处理结果
+export interface FaultResolveResult {
+  faultId: string
+  resolved: boolean
+  action: string
+  message?: string
 }

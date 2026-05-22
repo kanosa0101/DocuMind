@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * MinIO配置类
+ * MinIO配置类 (v3.0)
  */
 @Configuration
 public class MinioConfig {
@@ -19,6 +19,25 @@ public class MinioConfig {
 
     @Value("${minio.secret-key}")
     private String secretKey;
+
+    @Value("${minio.bucket}")
+    private String bucket;
+
+    public String getEndpoint() {
+        return endpoint;
+    }
+
+    public String getAccessKey() {
+        return accessKey;
+    }
+
+    public String getSecretKey() {
+        return secretKey;
+    }
+
+    public String getBucket() {
+        return bucket;
+    }
 
     /**
      * 创建MinIO客户端

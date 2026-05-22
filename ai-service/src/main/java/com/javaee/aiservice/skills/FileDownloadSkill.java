@@ -1,9 +1,11 @@
 package com.javaee.aiservice.skills;
 
 import com.javaee.aiservice.service.MinIOService;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.InputStream;
 
+@Slf4j
 public class FileDownloadSkill implements Skill {
 
     private final MinIOService minIOService;
@@ -33,43 +35,42 @@ public class FileDownloadSkill implements Skill {
         String bucketName = requestedBucketName;
         String bucketMessage = null;
 
-        System.out.println("开始下载文件: bucket=" + requestedBucketName + ", object=" + objectName);
+        log.info("开始下载文件: bucket={}, object={}", requestedBucketName, objectName);
 
         try {
             // 检查请求的桶是否存在
             if (!minIOService.bucketExists(requestedBucketName)) {
                 bucketMessage = "桶不存在: " + requestedBucketName + "，使用默认桶: documents";
                 bucketName = "documents";
-                System.out.println(bucketMessage);
+                log.warn(bucketMessage);
             }
-            
+
             // 检查默认桶是否存在，如果不存在则使用doc-ai
             if ("documents".equals(bucketName) && !minIOService.bucketExists(bucketName)) {
                 bucketMessage = "默认桶不存在: documents，使用备用桶: doc-ai";
                 bucketName = "doc-ai";
-                System.out.println(bucketMessage);
+                log.warn(bucketMessage);
             }
 
             // 获取文件元数据
-            System.out.println("从桶 " + bucketName + " 获取文件元数据...");
+            log.debug("从桶 {} 获取文件元数据...", bucketName);
             io.minio.StatObjectResponse metadata = minIOService.getFileMetadata(bucketName, objectName);
-            System.out.println("获取文件元数据成功");
-            
+            log.debug("获取文件元数据成功");
+
             // 获取文件内容类型
             String contentType = metadata.contentType();
-            System.out.println("文件内容类型: " + contentType);
-            
+            log.debug("文件内容类型: {}", contentType);
+
             // 获取文件输入流
-            System.out.println("从桶 " + bucketName + " 获取文件输入流...");
+            log.debug("从桶 {} 获取文件输入流...", bucketName);
             InputStream inputStream = minIOService.downloadFile(bucketName, objectName);
-            System.out.println("获取文件输入流成功");
-            
+            log.debug("获取文件输入流成功");
+
             // 返回包含文件流、元数据、桶消息和实际桶名称的数组
-            System.out.println("返回文件流和元数据");
+            log.info("返回文件流和元数据");
             return new Object[] { inputStream, contentType, objectName, bucketMessage, bucketName };
         } catch (Exception e) {
-            System.out.println("下载文件失败: " + e.getMessage());
-            e.printStackTrace();
+            log.error("下载文件失败: {}", e.getMessage(), e);
             throw new RuntimeException("下载文件失败: " + e.getMessage(), e);
         }
     }

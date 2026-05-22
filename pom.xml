@@ -32,8 +32,9 @@
         <spring-boot.version>3.2.0</spring-boot.version>
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
         <spring-cloud.version>2023.0.3</spring-cloud.version>
-        <spring-ai.version>1.0.0-M4</spring-ai.version>
+        <spring-ai.version>1.0.0-M4</spring-ai.version> <!-- 里程碑版本，待正式版发布后升级 -->
         <minio.version>8.5.7</minio.version>
+        <springdoc.version>2.3.0</springdoc.version>
         <itext.version>7.2.8</itext.version>
         <poi.version>5.2.5</poi.version>
         <mybatis-plus.version>3.5.5</mybatis-plus.version>
@@ -86,6 +87,20 @@
                 <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
                 <version>${mybatis-plus.version}</version>
             </dependency>
+
+            <!-- MinIO 统一版本管理 -->
+            <dependency>
+                <groupId>io.minio</groupId>
+                <artifactId>minio</artifactId>
+                <version>${minio.version}</version>
+            </dependency>
+
+            <!-- SpringDoc 统一版本管理 -->
+            <dependency>
+                <groupId>org.springdoc</groupId>
+                <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+                <version>${springdoc.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -123,7 +138,7 @@
                 <enabled>false</enabled>
             </snapshots>
         </repository>
-        <!-- Spring AI Milestone Repository -->
+        <!-- Spring AI Milestone Repository (M4版本需要) -->
         <repository>
             <id>spring-milestones</id>
             <name>Spring Milestones</name>
@@ -156,6 +171,14 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
+                    <encoding>UTF-8</encoding>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                            <version>1.18.30</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
         </plugins>
@@ -167,7 +190,6 @@
         <module>user-service</module>
         <module>file-service</module>
         <module>ai-service</module>
-        <module>document-service</module>
         <module>gateway-service</module>
     </modules>
 

@@ -3,7 +3,7 @@ spring:
     name: file
 
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:doc_ai}?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:13306}/${MYSQL_DATABASE:doc_ai}?useUnicode=true&characterEncoding=utf-8&useSSL=${MYSQL_USE_SSL:true}&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:admin123}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -65,15 +65,19 @@ mybatis-plus:
     log-impl: ${MYBATIS_LOG_IMPL:org.apache.ibatis.logging.slf4j.Slf4jImpl}
 
 server:
-  port: 8082
+  port: 18082
   servlet:
     context-path: /
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
 
 minio:
   endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
   access-key: ${MINIO_ACCESS_KEY:admin}
   secret-key: ${MINIO_SECRET_KEY:minio123}
-  bucket-name: ${MINIO_BUCKET:documents}
+  bucket: ${MINIO_BUCKET:docai-files}
   secure: false
 
 file:
@@ -91,6 +95,15 @@ file:
       - application/vnd.ms-powerpoint
       - application/vnd.openxmlformats-officedocument.presentationml.presentation
       - text/*
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:?JWT密钥未配置}
+
+# 网关签名验证配置
+gateway:
+  signature:
+    secret: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
 
 # 日志配置
 logging:

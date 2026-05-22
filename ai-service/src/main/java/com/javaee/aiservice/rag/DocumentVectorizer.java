@@ -1,22 +1,24 @@
 package com.javaee.aiservice.rag;
 
-import com.alibaba.dashscope.embeddings.TextEmbedding;
-import com.alibaba.dashscope.embeddings.TextEmbeddingParam;
-import com.alibaba.dashscope.embeddings.TextEmbeddingResult;
+import com.alibaba.dashscope.embeddings.MultiModalEmbedding;
+import com.alibaba.dashscope.embeddings.MultiModalEmbeddingItemText;
+import com.alibaba.dashscope.embeddings.MultiModalEmbeddingParam;
+import com.alibaba.dashscope.embeddings.MultiModalEmbeddingResult;
 import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.alibaba.dashscope.exception.UploadFileException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * 文档向量化器
  * 负责将文档内容转换为向量表示
- * 适配阿里云百炼dashscope的Embedding API
+ * 使用阿里云百炼多模态Embedding API (tongyi-embedding-vision-flash)
  */
 @Component
 public class DocumentVectorizer {
@@ -26,7 +28,7 @@ public class DocumentVectorizer {
     @Value("${spring.ai.dashscope.api-key:}")
     private String apiKey;
 
-    @Value("${spring.ai.dashscope.embedding.model:text-embedding-v3}")
+    @Value("${spring.ai.dashscope.embedding.model:tongyi-embedding-vision-flash-2026-03-06}")
     private String model;
 
     @Value("${spring.ai.dashscope.embedding.dimension:1024}")
@@ -55,16 +57,21 @@ public class DocumentVectorizer {
         }
 
         try {
-            // 构建请求参数
-            TextEmbeddingParam param = TextEmbeddingParam.builder()
+            // 构建文本输入项
+            MultiModalEmbeddingItemText textItem = MultiModalEmbeddingItemText.builder()
+                    .text(text)
+                    .build();
+
+            // 构建请求参数 - 使用contents而不是input
+            MultiModalEmbeddingParam param = MultiModalEmbeddingParam.builder()
                     .model(model)
                     .apiKey(apiKey)
-                    .texts(Arrays.asList(text))
+                    .contents(Collections.singletonList(textItem))
                     .build();
 
             // 创建模型实例并调用
-            TextEmbedding textEmbedding = new TextEmbedding();
-            TextEmbeddingResult result = textEmbedding.call(param);
+            MultiModalEmbedding multiModalEmbedding = new MultiModalEmbedding();
+            MultiModalEmbeddingResult result = multiModalEmbedding.call(param);
 
             log.debug("Embedding API调用成功");
 
@@ -85,7 +92,7 @@ public class DocumentVectorizer {
 
             throw new RuntimeException("Embedding API返回结果为空");
 
-        } catch (ApiException | NoApiKeyException e) {
+        } catch (ApiException | NoApiKeyException | UploadFileException e) {
             log.error("调用Embedding API失败", e);
             // 使用模拟向量作为fallback
             log.warn("使用模拟向量作为fallback");

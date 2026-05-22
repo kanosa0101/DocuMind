@@ -1,24 +1,31 @@
 <template>
   <div class="recent-documents">
     <div v-if="documents.length === 0" class="empty">
-      <span class="empty-icon">📂</span>
+      <FolderOpen class="empty-icon" :size="36" />
       <p>暂无文档</p>
     </div>
-    <div v-else class="doc-grid">
-      <div v-for="doc in documents" :key="doc.id" class="doc-item">
-        <span class="doc-icon">📄</span>
-        <span class="doc-title">{{ doc.title }}</span>
-        <span class="doc-time">{{ formatDate(doc.createTime) }}</span>
+    <div v-else class="doc-list">
+      <div v-for="doc in documents" :key="doc.fileUuid" class="doc-item" @click="$emit('select', doc)">
+        <FileText class="doc-icon" :size="24" />
+        <div class="doc-info">
+          <span class="doc-title">{{ doc.originalName || doc.fileName }}</span>
+          <span class="doc-time">{{ formatDate(doc.createTime) }}</span>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { DocumentVO } from '@/types/api'
+import type { FileInfo } from '@/api/file'
+import { FolderOpen, FileText } from '@lucide/vue'
 
 defineProps<{
-  documents: DocumentVO[]
+  documents: FileInfo[]
+}>()
+
+defineEmits<{
+  select: [doc: FileInfo]
 }>()
 
 const formatDate = (date: string) => {
@@ -28,7 +35,9 @@ const formatDate = (date: string) => {
 
 <style scoped>
 .recent-documents {
-  min-height: 200px;
+  height: 100%;
+  overflow-y: auto;
+  padding: 16px;
 }
 
 .empty {
@@ -36,47 +45,97 @@ const formatDate = (date: string) => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   color: var(--color-text-muted);
+  height: 100%;
 }
 
 .empty-icon {
-  font-size: 48px;
+  color: var(--color-text-muted);
 }
 
-.doc-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.doc-item {
-  padding: 16px;
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.5);
+.doc-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.doc-item {
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
   cursor: pointer;
-  transition: all var(--transition-base);
+  transition: all var(--transition-fast);
+}
+
+[data-theme="dark"] .doc-item {
+  background: rgba(26, 26, 26, 0.3);
+  border: 1px solid var(--glass-dark-border);
 }
 
 .doc-item:hover {
-  background: rgba(255, 255, 255, 0.8);
-  transform: translateY(-2px);
+  background: rgba(8, 145, 178, 0.1);
+  border-color: rgba(8, 145, 178, 0.3);
+}
+
+[data-theme="dark"] .doc-item:hover {
+  background: rgba(8, 145, 178, 0.15);
+  box-shadow: var(--glow-cyan-soft);
 }
 
 .doc-icon {
-  font-size: 32px;
+  color: var(--aurora-cyan);
+}
+
+[data-theme="dark"] .doc-icon {
+  color: var(--aurora-cyan-light);
+}
+
+.doc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
 }
 
 .doc-title {
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .doc-time {
   font-size: var(--font-size-xs);
   color: var(--color-text-muted);
+}
+
+/* 滚动条 */
+.recent-documents::-webkit-scrollbar {
+  width: 4px;
+}
+
+.recent-documents::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-theme="dark"] .recent-documents::-webkit-scrollbar-track {
+  background: rgba(26, 26, 26, 0.2);
+}
+
+.recent-documents::-webkit-scrollbar-thumb {
+  background: rgba(8, 145, 178, 0.3);
+  border-radius: 2px;
+}
+
+[data-theme="dark"] .recent-documents::-webkit-scrollbar-thumb {
+  background: rgba(8, 145, 178, 0.4);
 }
 </style>

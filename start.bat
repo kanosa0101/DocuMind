@@ -125,16 +125,16 @@ echo ========================================
 echo [SUCCESS] 访问地址
 echo ========================================
 echo.
-echo   API 网关         http://localhost:9080
-echo   用户服务         http://localhost:9081/swagger-ui.html
-echo   文件服务         http://localhost:9082/swagger-ui.html
-echo   AI 服务          http://localhost:9083/swagger-ui.html
-echo   文档服务         http://localhost:9084/swagger-ui.html
-echo   Nacos 控制台     http://localhost:8848/nacos
-echo   MinIO 控制台     http://localhost:9001
-echo   RabbitMQ 控制台  http://localhost:15672
+echo   API 网关         http://localhost:18080
+echo   用户服务         http://localhost:18081/swagger-ui.html
+echo   文件服务         http://localhost:18082/swagger-ui.html
+echo   AI 服务          http://localhost:18083/swagger-ui.html
+echo   文档服务         http://localhost:18084/swagger-ui.html
+echo   Nacos 控制台     http://localhost:18848/nacos
+echo   MinIO 控制台     http://localhost:19001
+echo   RabbitMQ 控制台  http://localhost:29672
 echo.
-echo   默认账号: admin / admin123
+echo   默认账号: admin / test123
 echo.
 exit /b 0
 

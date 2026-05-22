@@ -1,11 +1,8 @@
 package com.javaee.fileservice.dto;
 
-import lombok.Data;
-
 /**
  * 文件上传请求参数
  */
-@Data
 public class FileUploadDTO {
 
     private String fileName;
@@ -16,4 +13,35 @@ public class FileUploadDTO {
 
     private boolean override;
 
+    public String getFileName() {
+        return fileName;
+    }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
+    }
+
+    public String getDirectory() {
+        return directory;
+    }
+
+    public void setDirectory(String directory) {
+        this.directory = directory;
+    }
+
+    public boolean isOverride() {
+        return override;
+    }
+
+    public void setOverride(boolean override) {
+        this.override = override;
+    }
 }

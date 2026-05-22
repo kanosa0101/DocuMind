@@ -127,10 +127,10 @@ start_dev() {
 
   # 检查后端服务是否运行
   print_info "检查后端服务状态..."
-  if curl -s http://localhost:8080/api/users/login -X POST -H "Content-Type: application/json" -d '{"username":"test"}' --max-time 5 > /dev/null 2>&1; then
-    print_success "后端服务正常运行 (localhost:8080)"
+  if curl -s http://localhost:18080/api/users/login -X POST -H "Content-Type: application/json" -d '{"username":"test"}' --max-time 5 > /dev/null 2>&1; then
+    print_success "后端服务正常运行 (localhost:18080)"
   else
-    print_warning "后端服务未启动，请确保后端在 localhost:8080 运行"
+    print_warning "后端服务未启动，请确保后端在 localhost:18080 运行"
     print_info "后端启动命令: cd ../ && ./deploy.sh"
   fi
 
@@ -140,8 +140,8 @@ start_dev() {
   print_success "前端开发服务器启动成功!"
   print_separator
   echo ""
-  echo "访问地址: http://localhost:5173"
-  echo "API代理: http://localhost:8080"
+  echo "访问地址: http://localhost:5175"
+  echo "API代理: http://localhost:18080"
   echo ""
   echo "按 Ctrl+C 停止服务器"
   echo ""

@@ -7,18 +7,24 @@ services:
     environment:
       SPRING_APPLICATION_NAME: user
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MySQL密码未设置}
       SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
+      JWT_SECRET: ${JWT_SECRET:?JWT密钥未配置}
+      GATEWAY_SIGNATURE_SECRET: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
+    depends_on:
+      nacos: { condition: service_healthy }
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
     networks:
-      - documind-net
+      - docai-network
     ports:
-      - "28081:8081"
+      - "18081:18081"
 
   gateway:
     image: docai/gateway-service:1.0.0
@@ -27,14 +33,19 @@ services:
       SPRING_APPLICATION_NAME: gateway
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
       SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
+      JWT_SECRET: ${JWT_SECRET:?JWT密钥未配置}
+      GATEWAY_SIGNATURE_SECRET: ${GATEWAY_SIGNATURE_SECRET:?Gateway签名密钥未配置}
+    depends_on:
+      nacos: { condition: service_healthy }
+      redis: { condition: service_healthy }
     networks:
-      - documind-net
+      - docai-network
     ports:
-      - "28080:8080"
+      - "18080:18080"
 
   file:
     image: docai/file-service:1.0.0
@@ -42,21 +53,25 @@ services:
     environment:
       SPRING_APPLICATION_NAME: file
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MySQL密码未设置}
       SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: admin
-      MINIO_SECRET_KEY: minio123
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MinIO密码未设置}
+    depends_on:
+      nacos: { condition: service_healthy }
+      mysql: { condition: service_healthy }
+      minio: { condition: service_healthy }
     networks:
-      - documind-net
+      - docai-network
     ports:
-      - "28082:8082"
+      - "18082:18082"
 
   ai:
     image: docai/ai-service:1.0.0
@@ -65,17 +80,22 @@ services:
       SPRING_APPLICATION_NAME: ai
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
       SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: admin
-      MINIO_SECRET_KEY: minio123
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MinIO密码未设置}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OpenAI API密钥未配置}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+    depends_on:
+      nacos: { condition: service_healthy }
+      redis: { condition: service_healthy }
     networks:
-      - documind-net
+      - docai-network
     ports:
-      - "28083:8083"
+      - "18083:18083"
 
   document:
     image: docai/document-service:1.0.0
@@ -83,22 +103,26 @@ services:
     environment:
       SPRING_APPLICATION_NAME: document
       SPRING_CLOUD_NACOS_DISCOVERY_SERVER-ADDR: nacos:8848
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/doc_ai?useUnicode=true&characterEncoding=utf-8&useSSL=true&serverTimezone=Asia/Shanghai
       SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: admin123
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MySQL密码未设置}
       SPRING_REDIS_HOST: redis
-      SPRING_REDIS_PASSWORD: redis123
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD:?Redis密码未设置}
       SPRING_RABBITMQ_HOST: rabbitmq
-      SPRING_RABBITMQ_USERNAME: admin
-      SPRING_RABBITMQ_PASSWORD: rabbit123
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-admin}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:?RabbitMQ密码未设置}
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ACCESS_KEY: admin
-      MINIO_SECRET_KEY: minio123
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-admin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:?MinIO密码未设置}
+    depends_on:
+      nacos: { condition: service_healthy }
+      mysql: { condition: service_healthy }
+      minio: { condition: service_healthy }
     networks:
-      - documind-net
+      - docai-network
     ports:
-      - "28084:8084"
+      - "18084:18084"
 
 networks:
-  documind-net:
+  docai-network:
     driver: bridge

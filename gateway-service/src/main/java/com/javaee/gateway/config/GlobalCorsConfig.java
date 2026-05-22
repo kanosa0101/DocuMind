@@ -15,7 +15,7 @@ import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
 @Configuration
 public class GlobalCorsConfig {
 
-    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:3000}")
+    @Value("${cors.allowed-origins:http://localhost:5173,http://localhost:5175,http://localhost:3000}")
     private String allowedOrigins;
 
     @Bean

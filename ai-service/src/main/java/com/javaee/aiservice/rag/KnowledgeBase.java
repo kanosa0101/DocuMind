@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -22,6 +23,9 @@ public class KnowledgeBase {
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;  // 用于存储纯文本，确保UTF-8编码
 
     @Autowired
     private DocumentVectorizer vectorizer;
@@ -45,7 +49,8 @@ public class KnowledgeBase {
             String docKey = DOCUMENT_PREFIX + documentId;
             String contentKey = CONTENT_PREFIX + documentId;
 
-            redisTemplate.opsForValue().set(contentKey, content);
+            // 使用StringRedisTemplate存储文本内容，确保UTF-8编码
+            stringRedisTemplate.opsForValue().set(contentKey, content);
             redisTemplate.opsForHash().putAll(docKey, metadata);
 
             float[] vector = vectorizer.vectorize(content);
@@ -59,7 +64,7 @@ public class KnowledgeBase {
     }
 
     /**
-     * 从知识库移除文档
+     * 从知识库移除文档（物理删除）
      * @param documentId 文档ID
      */
     public void removeDocument(String documentId) {
@@ -67,7 +72,7 @@ public class KnowledgeBase {
 
         try {
             redisTemplate.delete(DOCUMENT_PREFIX + documentId);
-            redisTemplate.delete(CONTENT_PREFIX + documentId);
+            stringRedisTemplate.delete(CONTENT_PREFIX + documentId);
             vectorStore.delete(documentId);
 
             log.info("文档移除成功: documentId={}", documentId);
@@ -78,13 +83,60 @@ public class KnowledgeBase {
     }
 
     /**
+     * 软删除文档 (v3.0新增)
+     * 标记文档和向量deleted=true，不物理删除，搜索时过滤
+     * @param documentId 文档ID
+     */
+    public void softDeleteDocument(String documentId) {
+        log.info("软删除文档: documentId={}", documentId);
+
+        try {
+            // 元数据标记deleted
+            String docKey = DOCUMENT_PREFIX + documentId;
+            redisTemplate.opsForHash().put(docKey, "deleted", true);
+
+            // 向量软删除
+            vectorStore.softDelete(documentId);
+
+            log.info("文档软删除成功: documentId={}", documentId);
+        } catch (Exception e) {
+            log.error("文档软删除失败", e);
+            throw new RuntimeException("文档软删除失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 恢复文档 (v3.0新增)
+     * 标记文档和向量deleted=false，恢复可检索状态
+     * @param documentId 文档ID
+     */
+    public void restoreDocument(String documentId) {
+        log.info("恢复文档: documentId={}", documentId);
+
+        try {
+            // 元数据恢复deleted=false
+            String docKey = DOCUMENT_PREFIX + documentId;
+            redisTemplate.opsForHash().put(docKey, "deleted", false);
+
+            // 向量恢复
+            vectorStore.restore(documentId);
+
+            log.info("文档恢复成功: documentId={}", documentId);
+        } catch (Exception e) {
+            log.error("文档恢复失败", e);
+            throw new RuntimeException("文档恢复失败: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * 获取文档内容
      * @param documentId 文档ID
      * @return 文档内容
      */
     public String getDocumentContent(String documentId) {
         try {
-            return (String) redisTemplate.opsForValue().get(CONTENT_PREFIX + documentId);
+            // 使用StringRedisTemplate读取文本，确保UTF-8解码
+            return stringRedisTemplate.opsForValue().get(CONTENT_PREFIX + documentId);
         } catch (Exception e) {
             log.warn("获取文档内容失败", e);
             return null;
@@ -215,7 +267,7 @@ public class KnowledgeBase {
      */
     private List<Map<String, Object>> bm25Search(String query, int topK) {
         List<Map<String, Object>> results = new ArrayList<>();
-        Set<String> docKeys = redisTemplate.keys(CONTENT_PREFIX + "*");
+        Set<String> docKeys = stringRedisTemplate.keys(CONTENT_PREFIX + "*");
 
         if (docKeys == null || docKeys.isEmpty()) {
             return results;
@@ -223,7 +275,7 @@ public class KnowledgeBase {
 
         for (String key : docKeys) {
             String docId = key.substring(CONTENT_PREFIX.length());
-            String content = (String) redisTemplate.opsForValue().get(key);
+            String content = stringRedisTemplate.opsForValue().get(key);
 
             if (content != null) {
                 float score = computeBM25(query, content);
@@ -301,14 +353,63 @@ public class KnowledgeBase {
     }
 
     /**
-     * 更新文档
+     * 获取所有文档信息（包含ID和标题）
+     * @return 文档信息列表 [{id, title}]
+     */
+    public List<Map<String, Object>> getAllDocuments() {
+        try {
+            Set<String> keys = redisTemplate.keys(DOCUMENT_PREFIX + "*");
+            if (keys == null) {
+                return Collections.emptyList();
+            }
+            return keys.stream()
+                .map(key -> {
+                    String docId = key.substring(DOCUMENT_PREFIX.length());
+                    Map<String, Object> metadata = getDocumentMetadata(docId);
+                    Map<String, Object> docInfo = new HashMap<>();
+                    docInfo.put("id", docId);
+                    docInfo.put("title", metadata.getOrDefault("title", "文档 " + docId));
+                    return docInfo;
+                })
+                .toList();
+        } catch (Exception e) {
+            log.warn("获取文档列表失败", e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 更新文档 (v3.0增强)
+     * 使用软删除策略：旧向量标记deleted=true，新向量创建
      * @param documentId 文档ID
      * @param content 新内容
      * @param metadata 新元数据
      */
     public void updateDocument(String documentId, String content, Map<String, Object> metadata) {
-        log.info("更新文档: documentId={}", documentId);
-        removeDocument(documentId);
-        addDocument(documentId, content, metadata);
+        log.info("更新文档（软删除策略）: documentId={}", documentId);
+
+        try {
+            String docKey = DOCUMENT_PREFIX + documentId;
+            String contentKey = CONTENT_PREFIX + documentId;
+
+            // 更新文档内容
+            stringRedisTemplate.opsForValue().set(contentKey, content);
+            redisTemplate.opsForHash().putAll(docKey, metadata);
+
+            // 获取当前版本
+            Object currentVersion = redisTemplate.opsForHash().get(docKey, "version");
+            int newVersion = currentVersion != null ? ((Number) currentVersion).intValue() + 1 : 2;
+            metadata.put("version", newVersion);
+
+            // 向量软删除旧版本，创建新版本
+            float[] vector = vectorizer.vectorize(content);
+            vectorStore.softDelete(documentId);
+            vectorStore.store(documentId + "_v" + newVersion, vector, metadata);
+
+            log.info("文档更新成功: documentId={}, version={}", documentId, newVersion);
+        } catch (Exception e) {
+            log.error("更新文档失败", e);
+            throw new RuntimeException("更新文档失败: " + e.getMessage(), e);
+        }
     }
 }

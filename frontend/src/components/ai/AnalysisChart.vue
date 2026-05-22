@@ -1,7 +1,7 @@
 <template>
   <div class="analysis-chart">
     <div class="chart-header">
-      <span class="chart-icon">📊</span>
+      <BarChart3 class="chart-icon" :size="20" />
       <span>文档分析</span>
     </div>
     <div v-if="analysis" class="chart-content">
@@ -31,6 +31,8 @@
 </template>
 
 <script setup lang="ts">
+import { BarChart3 } from '@lucide/vue'
+
 defineProps<{
   analysis: any
 }>()
@@ -51,6 +53,14 @@ defineProps<{
   color: var(--color-text);
 }
 
+.chart-icon {
+  color: var(--aurora-cyan);
+}
+
+[data-theme="dark"] .chart-icon {
+  color: var(--aurora-cyan-light);
+}
+
 .chart-content {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -60,10 +70,25 @@ defineProps<{
 .stat-item {
   padding: 12px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.3);
   display: flex;
   justify-content: space-between;
   align-items: center;
+  transition: all var(--transition-base);
+}
+
+[data-theme="dark"] .stat-item {
+  background: rgba(26, 26, 26, 0.4);
+  border: 1px solid var(--glass-dark-border);
+}
+
+.stat-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--glow-cyan-soft);
+}
+
+[data-theme="dark"] .stat-item:hover {
+  border-color: rgba(8, 145, 178, 0.3);
 }
 
 .stat-label {
@@ -74,7 +99,11 @@ defineProps<{
 .stat-value {
   font-size: var(--font-size-lg);
   font-weight: 600;
-  color: var(--color-primary);
+  color: var(--aurora-cyan);
+}
+
+[data-theme="dark"] .stat-value {
+  text-shadow: var(--glow-text-cyan);
 }
 
 .empty {

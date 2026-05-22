@@ -12,4 +12,5 @@ public class TextSummarizeVO {
     private Integer originalLength;
     private Integer summaryLength;
     private Double compressionRatio;
-}
+
+    }

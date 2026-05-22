@@ -1,11 +1,11 @@
 package com.javaee.user.controller;
 
 import com.javaee.common.model.Result;
+import com.javaee.common.util.RabbitMQUtil;
 import com.javaee.user.config.RabbitMQConfig;
 import com.javaee.user.dto.LoginDTO;
 import com.javaee.user.dto.RegisterDTO;
 import com.javaee.user.service.UserService;
-import com.javaee.user.util.RabbitMQUtil;
 import com.javaee.user.vo.LoginVO;
 import com.javaee.user.vo.UserVO;
 import io.swagger.v3.oas.annotations.Operation;

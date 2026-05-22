@@ -6,4 +6,5 @@ import lombok.Data;
 public class KeywordExtractDTO {
     private String content;
     private Integer count;
-}
+
+    }

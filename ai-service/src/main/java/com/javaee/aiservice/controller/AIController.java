@@ -5,23 +5,17 @@ import com.javaee.aiservice.service.*;
 import com.javaee.aiservice.vo.*;
 import com.javaee.common.model.Result;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.InputStream;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 /**
  * AI控制器
- * 提供AI处理和文件管理相关的REST API接口
+ * 提供AI处理相关的REST API接口
+ *
+ * 注意: 文件操作接口已移至 file-service 的 FileController
+ * 本控制器仅保留纯AI处理功能
  */
 @Slf4j
 @RestController
@@ -31,21 +25,6 @@ public class AIController {
 
     @Autowired
     private AIService aiService;
-
-    @Autowired
-    private FileUploadService fileUploadService;
-
-    @Autowired
-    private FileDownloadService fileDownloadService;
-
-    @Autowired
-    private FileDeleteService fileDeleteService;
-
-    @Autowired
-    private FileVersionService fileVersionService;
-
-    @Autowired
-    private RecycleBinService recycleBinService;
 
     /**
      * 文档摘要
@@ -80,132 +59,6 @@ public class AIController {
     @Operation(summary = "文档分析", description = "对文档进行深度分析")
     public Result<TextAnalyzeVO> analyze(@RequestBody TextAnalyzeDTO dto) {
         TextAnalyzeVO vo = aiService.analyze(dto);
-        return Result.success(vo);
-    }
-
-    /**
-     * 文件上传接口
-     * @param file 上传的文件
-     * @param dto 上传参数
-     * @return 文件上传结果
-     */
-    @PostMapping("/upload")
-    @Operation(summary = "文件上传", description = "将文件上传至MinIO服务器")
-    public Result<FileUploadVO> uploadFile(
-            @Parameter(description = "上传的文件") @RequestParam("file") MultipartFile file,
-            FileUploadDTO dto) {
-        FileUploadVO vo = fileUploadService.uploadFile(file, dto);
-        return Result.success(vo);
-    }
-
-    /**
-     * 文件下载接口（直接下载）
-     * @param dto 下载参数
-     * @return 文件流
-     */
-    @GetMapping("/download")
-    @Operation(summary = "文件下载", description = "从MinIO服务器下载文件")
-    public ResponseEntity<org.springframework.core.io.Resource> downloadFile(FileDownloadDTO dto) {
-        try {
-            log.info("文件下载请求: bucketName={}, objectName={}", dto.getBucketName(), dto.getObjectName());
-            InputStream inputStream = fileDownloadService.downloadFile(dto);
-
-            String filename = dto.getObjectName();
-            if (filename.contains("/")) {
-                filename = filename.substring(filename.lastIndexOf("/") + 1);
-            }
-
-            org.springframework.core.io.InputStreamResource resource =
-                new org.springframework.core.io.InputStreamResource(inputStream);
-
-            log.info("文件下载成功: {}", filename);
-            return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                    "attachment; filename=\"" + URLEncoder.encode(filename, StandardCharsets.UTF_8) + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(resource);
-        } catch (Exception e) {
-            log.error("文件下载失败: {}", e.getMessage(), e);
-            return ResponseEntity.internalServerError()
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-                .body(new org.springframework.core.io.InputStreamResource(
-                    new java.io.ByteArrayInputStream(
-                        ("{\"code\":500,\"message\":\"文件下载失败: " + e.getMessage() + "\"}").getBytes()
-                    )
-                ));
-        }
-    }
-
-    /**
-     * 获取文件访问URL接口
-     * @param dto 下载参数
-     * @return 文件访问URL
-     */
-    @GetMapping("/download/url")
-    @Operation(summary = "获取文件URL", description = "获取MinIO中文件的预签名访问URL")
-    public Result<FileDownloadVO> getFileUrl(FileDownloadDTO dto) {
-        FileDownloadVO vo = fileDownloadService.getFileUrl(dto);
-        return Result.success(vo);
-    }
-
-    /**
-     * 删除文件接口
-     * @param dto 删除参数
-     * @return 删除结果
-     */
-    @DeleteMapping("/files")
-    @Operation(summary = "删除文件", description = "删除文件，支持确认删除和回收站")
-    public Result<FileDeleteVO> deleteFile(FileDeleteDTO dto) {
-        FileDeleteVO vo = fileDeleteService.deleteFile(dto, "anonymous");
-        return Result.success(vo);
-    }
-
-    /**
-     * 恢复文件接口
-     * @param dto 恢复参数
-     * @return 恢复结果
-     */
-    @PostMapping("/files/restore")
-    @Operation(summary = "恢复文件", description = "从回收站恢复文件")
-    public Result<FileRestoreVO> restoreFile(@RequestBody FileRestoreDTO dto) {
-        FileRestoreVO vo = fileDeleteService.restoreFile(dto);
-        return Result.success(vo);
-    }
-
-    /**
-     * 获取回收站文件列表接口
-     * @param bucketName 存储桶名称
-     * @return 回收站文件列表
-     */
-    @GetMapping("/recycle-bin")
-    @Operation(summary = "回收站列表", description = "获取回收站中的文件列表")
-    public Result<RecycleBinVO> listRecycleBin(
-            @Parameter(description = "存储桶名称（可选）") @RequestParam(required = false) String bucketName) {
-        RecycleBinVO vo = recycleBinService.listRecycleBin(bucketName);
-        return Result.success(vo);
-    }
-
-    /**
-     * 获取文件版本列表接口
-     * @param dto 查询参数
-     * @return 文件版本信息
-     */
-    @GetMapping("/files/versions")
-    @Operation(summary = "文件版本列表", description = "获取文件的所有版本")
-    public Result<FileVersionVO> getVersions(FileVersionDTO dto) {
-        FileVersionVO vo = fileVersionService.getVersions(dto);
-        return Result.success(vo);
-    }
-
-    /**
-     * 切换文件版本接口
-     * @param dto 切换参数
-     * @return 切换后的版本信息
-     */
-    @PostMapping("/files/versions/switch")
-    @Operation(summary = "切换文件版本", description = "切换到指定版本")
-    public Result<FileVersionVO.VersionInfo> switchVersion(@RequestBody FileVersionSwitchDTO dto) {
-        FileVersionVO.VersionInfo vo = fileVersionService.switchVersion(dto);
         return Result.success(vo);
     }
 }

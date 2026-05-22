@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/auth'
 
 const whiteList = ['/login', '/register', '/404']
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, _from, next) => {
   // 白名单直接放行
   if (whiteList.includes(to.path)) {
     // 已登录用户访问登录/注册页，重定向到首页

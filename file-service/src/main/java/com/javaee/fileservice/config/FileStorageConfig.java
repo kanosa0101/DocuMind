@@ -18,7 +18,7 @@ public class FileStorageConfig {
     @Value("${file.storage.max-size}")
     private long maxSize;
 
-    @Value("${minio.bucket-name}")
+    @Value("${minio.bucket}")
     private String bucketName;
 
     public String getStorageType() {
